@@ -49,24 +49,38 @@ def init_argument_parser():
         # -- 50 --------------- | ---------------------------------------------------------------- 100 -- #
         description=textwrap.dedent("""\
         This script do merges in a list of repos. For each repo, a source-branch and a dest-branch must be
-        given. Source- and dest-branches can be given as defaults to be used in multiple repos sharing these
-        branch-names.
-        The merges are executed in parallel."""))
-    # TODO Base-URL not needed, unitl Bitbucket pull-requests-URLs are created.
-    # parser.add_argument('-u', '--base-url', required=True, help="Bitbucket base-URL.")
+        given. Source- and dest-branches can be given individually for each repo, and as defaults to be used
+        in multiple repos sharing these branch-names.
+
+        The merges are executed in parallel.
+
+        This script do not clone the repos. This is because you might post-process cloned repo, e.g. install
+        merge-drivers.
+
+        Before each merge, an optional pre-merge-script can be executed, given in parameter
+        -e/--exec-pre-merge-script. This script is executed in each repo's merge-task, means it runs parallel.
+        Here you can clone the repos, install merge-drivers, and others.
+        This script runs in an environment with following environment variables exported:
+            o BASE_URL          As parameter -u
+            o PROJECT_KEY       From parameter -n the 'PRJ' part
+            o REPO_NAME         From parameter -n the 'REPO' part
+            o SOURCE_BRANCH     From parameter -n the 'SOURCE_BRANCH' part, or the default-source-branch -S if absent
+            o DEST_BRANCH       From parameter -n the 'DEST_BRANCH' part, or the default-dest-branch -D if absent
+            o REPO_DIR          Parameter -d, extended by the 'REPO' part of parameter -n """))
+    parser.add_argument('-u', '--base-url', help="Remote base URL.")
     parser.add_argument('-n', '--repo-names', required=True, nargs='+',
-                        metavar='PRJ/REPO|PRJ/REPO:SRC-BRANCH:DEST-BRANCH',
+                        metavar='PRJ/REPO|PRJ/REPO:SOURCE_BRANCH:DEST_BRANCH',
                         # ---------------------------------------------------------------- 100 -- #
                         help=textwrap.dedent("""\
-                        Names of the repos to be processed in the format PRJ/repo:source-branch:dest-branch.
-                        "PRJ" means the bitbucket-project-key, and "repo" the name of the cloned repo
+                        Names of the repos to be processed in the format prj/repo:source-branch:dest-branch.
+                        'prj' means the bitbucket-project-key, and 'repo' the name of the cloned repo
                         in the filesystem.
                         Valid formats are:
-                          o PRJ/repo:source-branch:dest-branch  (no defaults taken into account)
-                          o PRJ/repo  (branches default to --default-source-branch and --default-dest-branch)
-                          o PRJ/repo:source-branch:  (dest-branch omitted, defaults to --default-dest-branch)
-                          o PRJ/repo::dest-branch  (source-branch omitted, defaults to --default-source-branch)
-                          o PRJ/repo::  (same as PRJ/repo)
+                          o prj/repo:source-branch:dest-branch  (no defaults taken into account)
+                          o prj/repo  (branches default to --default-source-branch and --default-dest-branch)
+                          o prj/repo:source-branch:  (dest-branch omitted, defaults to --default-dest-branch)
+                          o prj/repo::dest-branch  (source-branch omitted, defaults to --default-source-branch)
+                          o prj/repo::  (same as PRJ/repo)
                         The repos given in this parameter should exist in --repos-dir. This script does
                         not clone missing repos. If a repo is missing, its merge will be skipped and an
                         error-message will be printed. But all existing repos will be merged."""))
@@ -86,9 +100,9 @@ def init_argument_parser():
                         The pattern understands the following placeholders:
                           o %%SBR           Source-branch name
                           o %%DBR           Dest-branch name
-                          o %%DATE(format)  Date. For format see "strftime() and strptime() Format Codes"
+                          o %%DATE(format)  Date. For format see 'strftime() and strptime() Format Codes'
                                 https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes.
-                                E.g. %%DATE(%%d%%b) will be replaced with "01Jan".
+                                E.g. %%DATE(%%d%%b) will be replaced with '01Jan'.
                                 In a Unix shell you can also use $(date +%%d%%b). But the %%DATE()
                                 placeholder is portable because Python does the formatting rather than an
                                 external command."""))
@@ -98,14 +112,18 @@ def init_argument_parser():
     return parser
 
 
-def make_repo_metadata(repo: str):
-    # A repo is given either bare 'PRJ/repo' or with source- and dest-branch 'PRJ/repo:source-branch:dest-branch'.
+def split_into_repo_metadata(repo: str):
+    # Spit the parameter repo into project_key, repo_name, source_branch, dest_branch.
+    #
+    # A repo is given either bare 'prj/repo' or with source- and dest-branch 'prj/repo:source-branch:dest-branch'.
     # Emtpy branches are valid, they default to the default-source-branch or default-dest-branch.
-    # Valid forms are:
-    #   repo (same as 'repo::')
-    #   repo:source-branch:
-    #   repo::dest-branch
-    #   repo:: (same as bare 'repo')
+    # Valid forms of repo are:
+    #   o prj/repo:source-branch:dest-branch  (no defaults taken into account)
+    #   o prj/repo  (branches default to --default-source-branch and --default-dest-branch)
+    #   o prj/repo:source-branch:  (dest-branch omitted, defaults to --default-dest-branch)
+    #   o prj/repo::dest-branch  (source-branch omitted, defaults to --default-source-branch)
+    #   o prj/repo::  (same as PRJ/repo)
+    #
     parts = re.split(':', repo)
     error_msg = f"Given repo '{repo}' has unexpected format. " + \
                 "See help for parameter -n/--repo-names for accepted formats."
@@ -132,11 +150,32 @@ def make_repo_metadata(repo: str):
 
 
 def make_repos_metadata(repos: List[str], default_source_branch: str, default_dest_branch: str):
+    """
+    Transform the repos given in command line parameter -n/--repo-names into dict of following format:
+
+        [
+            {
+                'project_key': 'prj1',
+                'repo_name': 'repo1',
+                'source_branch':
+                'stable-tag-1',
+                'dest_branch': 'my-feature-branch'
+            },
+            {
+                'project_key': 'prj1',
+                'repo_name': 'repo2',
+                'source_branch':
+                'stable-tag-1',
+                'dest_branch': 'my-feature-branch'
+            },
+            ...
+        ]
+    """
     default_source_branch = default_source_branch.strip()
     default_dest_branch = default_dest_branch.strip()
     repos_metadata = []
     for repo in repos:
-        project_key, repo_name, source_branch, dest_branch = make_repo_metadata(repo)
+        project_key, repo_name, source_branch, dest_branch = split_into_repo_metadata(repo)
         if not source_branch:
             source_branch = default_source_branch
         if not dest_branch:
@@ -148,6 +187,13 @@ def make_repos_metadata(repos: List[str], default_source_branch: str, default_de
 
 
 def validate_repos_metadata(repos_metadata):
+    """
+    Check for completeness of each repo's metadata.
+
+    Each repo needs a source-branch and a dest-branch. They can be given in parameter -n/--repo-names, or as default
+    in -S/--default-source-branch and -D/--default-dest-branch. But if not given, the merge can't be started. This
+    is an configuration error.
+    """
     error = None
     for repo_metadata in repos_metadata:
         project_key = repo_metadata['project_key']
@@ -287,6 +333,8 @@ def main():
     global g_cl_args
     g_cl_args = cl_parser.parse_args()
 
+    # The g_logsdir_with_timestamped_subdir can't be set at the beginning of the script because it contains data
+    # from the arg-parser.
     global g_logsdir_with_timestamped_subdir
     start_timestamp_formatted_str = g_start_timestamp.strftime('%Y%m%d-%H%M%S')
     g_logsdir_with_timestamped_subdir = pathlib.Path(g_cl_args.logs_dir, start_timestamp_formatted_str)
@@ -304,7 +352,6 @@ def main():
         g_logger.error(error)
         sys.exit(1)
 
-    # TODO make pathlib.Path() first?
     os.makedirs(g_cl_args.repos_dir, exist_ok=True)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
