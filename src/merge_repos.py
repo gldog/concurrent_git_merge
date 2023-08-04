@@ -108,6 +108,8 @@ def init_argument_parser():
                                 external command."""))
     parser.add_argument('-l', '--log_level', choices=LOG_LEVELS, default=DEFAULT_LOGLEVEL,
                         help=f"Defaults to {DEFAULT_LOGLEVEL}.")
+    parser.add_argument('-e', '--exec-pre-merge-script',
+                        help="Execute this script for each repo before the merge starts.")
 
     return parser
 
@@ -211,11 +213,17 @@ def log_task(logfile_name: str, logfile_content: str):
         f.write(logfile_content)
 
 
-def run_command(command, command_shorten_for_log, repo_displayname_for_log, logfile_name, honor_returncode=True):
+def run_command(command, command_shorten_for_log, repo_displayname_for_log, logfile_name, honor_returncode=True,
+                env=None):
     g_logger.info(f"{repo_displayname_for_log}: $ {command_shorten_for_log}")
     log_task(logfile_name, f"$ {command}\n")
-    r = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    log_task(logfile_name, f"Returncode: {r.returncode}; Output:\n{r.stdout.decode()}\n")
+    timestamp_begin = datetime.now()
+    r = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, env=env)
+    timestamp_end = datetime.now()
+    log_task(logfile_name,
+             f"Returncode: {r.returncode}; " +
+             f"Duration: {timestamp_end - timestamp_begin}; " +
+             f"Output:\n{r.stdout.decode()}\n")
     if honor_returncode and r.returncode != 0:
         error_msg = f"{repo_displayname_for_log}: The following command exited with exit-code {r.returncode}:\n" \
                     f"{command}\n{r.stdout.decode()}"
@@ -246,53 +254,62 @@ def execute_merge(repo_metadata):
     source_branch = repo_metadata['source_branch']
     dest_branch = repo_metadata['dest_branch']
     logfile_name = f'{project_key}--{repo_name}.log'
+    g_logger.info(f"Started merge-task for {project_key}/{repo_name}.")
+    log_task(logfile_name, f"Started merge-task for {project_key}/{repo_name}.")
 
+    task_finish_status = "successfully"
     try:
         global g_cl_args
-        # The repo is expected to be present.
-        repo_git_dir = pathlib.Path(g_cl_args.repos_dir, repo_name, '.git')
-        if not repo_git_dir.is_dir():
-            raise Exception(f"Repo '{project_key}/{repo_name}' is given on the command line, but it is missing.")
-
-        repo_path = pathlib.Path(g_cl_args.repos_dir, repo_name)
-        log_task(logfile_name, "Current installed merge-drivers:\n")
+        repo_dir = pathlib.Path(g_cl_args.repos_dir, repo_name)
         repo_displayname_for_logging = f'{project_key}/{repo_name}'
 
-        # If no merge-driver is found, the returncode is 1.
-        command = f'git -C {repo_path} config --local --get-regexp merge-driver'
-        command_shorten_for_log = command.replace(f' -C {repo_path}', '')
-        r = run_command(command, command_shorten_for_log, repo_displayname_for_logging, logfile_name,
-                        honor_returncode=False)
-        if r.returncode != 0:
-            log_task(logfile_name, "  (No merge-driver found)\n\n")
+        if g_cl_args.exec_pre_merge_script:
+            env = os.environ.copy()
+            env['REPOS_DIR'] = g_cl_args.repos_dir
+            if g_cl_args.base_url:
+                env['BASE_URL'] = g_cl_args.base_url.rstrip('/')
+            env['PROJECT_KEY'] = project_key
+            env['REPO_NAME'] = repo_name
+            env['SOURCE_BRANCH'] = source_branch
+            env['DEST_BRANCH'] = dest_branch
+            env['REPO_DIR'] = str(repo_dir)
+            command = g_cl_args.exec_pre_merge_script
+            run_command(command, command, repo_displayname_for_logging, logfile_name, env=env)
+
+        # The repo is expected to be present.
+        if not pathlib.Path(repo_dir, '.git').is_dir():
+            raise Exception(
+                f"Repo '{project_key}/{repo_name}' is given in parameter -n/--repo-names, " +
+                f"but it is missing in {g_cl_args.repos_dir} given in parameter -d/--repos-dir.")
 
         commands = [
-            f'git -C {repo_path} reset --hard',
-            f'git -C {repo_path} clean -fd',
-            f'git -C {repo_path} checkout {dest_branch}',
-            f'git -C {repo_path} pull --ff'
+            f'git -C {repo_dir} reset --hard',
+            f'git -C {repo_dir} clean -fd',
+            f'git -C {repo_dir} checkout {dest_branch}',
+            f'git -C {repo_dir} pull --ff'
         ]
-        run_commands(commands, f' -C {repo_path}', repo_displayname_for_logging, logfile_name)
+        run_commands(commands, f' -C {repo_dir}', repo_displayname_for_logging, logfile_name)
 
         if g_cl_args.merge_branch_pattern:
             merge_branch = make_mergebranch_name(g_cl_args.merge_branch_pattern, source_branch, dest_branch)
             # Delete the merge-branch if it exists.
-            command = f'git -C {repo_path} show-ref --verify --quiet refs/heads/{merge_branch}'
-            command_shorten_for_log = command.replace(f' -C {repo_path}', '')
+            command = f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{merge_branch}'
+            command_shorten_for_log = command.replace(f' -C {repo_dir}', '')
             r = run_command(command, command_shorten_for_log, repo_displayname_for_logging, logfile_name,
                             honor_returncode=False)
             commands.clear()
             if r.returncode == 0:
-                commands.append(f'git -C {repo_path} branch -D {merge_branch}')
+                commands.append(f'git -C {repo_dir} branch -D {merge_branch}')
             else:
                 log_task(logfile_name, "  (Merge-branch not present)\n\n")
-            commands.append(f'git -C {repo_path} checkout -b {merge_branch}')
+            commands.append(f'git -C {repo_dir} checkout -b {merge_branch}')
 
         commands.append(
-            f'git -C {repo_path} merge --no-ff --no-edit -Xrenormalize -Xignore-space-at-eol {source_branch}')
-        run_commands(commands, f' -C {repo_path}', repo_displayname_for_logging, logfile_name)
+            f'git -C {repo_dir} merge --no-ff --no-edit -Xrenormalize -Xignore-space-at-eol {source_branch}')
+        run_commands(commands, f' -C {repo_dir}', repo_displayname_for_logging, logfile_name)
 
     except Exception as e:
+        task_finish_status = "with error"
         return str(e)
     finally:
         task_end_timestamp = datetime.now()
@@ -300,6 +317,8 @@ def execute_merge(repo_metadata):
         repo_metadata['task_end'] = task_end_timestamp.isoformat()
         task_duration = task_end_timestamp - task_start_timestamp
         repo_metadata['task_duration'] = str(task_duration)
+        g_logger.info(f"Finished merge-task for {project_key}/{repo_name} {task_finish_status}.")
+        log_task(logfile_name, f"Finished merge-task for {project_key}/{repo_name} {task_finish_status}.")
         log_task(logfile_name, f"Merge-task statistics:\n{json.dumps(repo_metadata, indent=2)}")
 
 
