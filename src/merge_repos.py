@@ -194,17 +194,17 @@ def validate_repos_metadata(repos_metadata):
 
     Each repo needs a source-branch and a dest-branch. They can be given in parameter -n/--repo-names, or as default
     in -S/--default-source-branch and -D/--default-dest-branch. But if not given, the merge can't be started. This
-    is an configuration error.
+    is a configuration error.
     """
-    error = None
+    errors = []
     for repo_metadata in repos_metadata:
         project_key = repo_metadata['project_key']
         repo_name = repo_metadata['repo_name']
         if not repo_metadata['source_branch']:
-            error = f"Missing source-branch for repo '{project_key}/{repo_name}'"
+            errors.append(f"Missing source-branch for repo '{project_key}/{repo_name}'")
         if not repo_metadata['dest_branch']:
-            error = f"Missing dest-branch for repo '{project_key}/{repo_name}'"
-    return error
+            errors.append(f"Missing dest-branch for repo '{project_key}/{repo_name}'")
+    return errors
 
 
 def log_task(logfile_name: str, logfile_content: str):
@@ -363,9 +363,9 @@ def main():
     repos_metadata = make_repos_metadata(g_cl_args.repo_names, g_cl_args.default_source_branch,
                                          g_cl_args.default_dest_branch)
     g_logger.debug(f"repos_metadata: {repos_metadata}")
-    error = validate_repos_metadata(repos_metadata)
-    if error:
-        g_logger.error(error)
+    errors = validate_repos_metadata(repos_metadata)
+    if errors:
+        g_logger.error(errors)
         sys.exit(1)
 
     os.makedirs(g_cl_args.repos_dir, exist_ok=True)
