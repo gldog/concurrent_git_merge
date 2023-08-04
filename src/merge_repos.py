@@ -323,20 +323,17 @@ def execute_merge(repo_metadata):
 
 
 def get_formatted_timediff_mmss(time_diff: timedelta) -> str:
-    """Convert the given time_diff to format "MM:SS". If the time-diff is < 1s, overwrite it to 1s.
+    """
+    Convert the given time_diff to format "MM:SS.00".
     The MM can be > 60 min.
     :param time_diff: The time-diff
-    :return: Time-diff in MM:SS, but min. 1s.
+    :return: Time-diff in MM:SS.00, where "00" represents milliseconds.
     """
 
-    # Convert to integer because nobody will be interested in the milliseconds-precision. If the diff is 0,
-    # overwrite it to 1 (second).
-    s = int(time_diff.total_seconds())
-    if s == 0:
-        s = 1
-    minutes = s // 60
-    seconds = s % 60
-    formatted_diff = f'{minutes:02d}:{seconds:02d}'
+    total_seconds = time_diff.total_seconds()
+    minutes = total_seconds // 60
+    seconds = total_seconds % 60
+    formatted_diff = f'{minutes:02.0f}:{seconds:02.2f}'
 
     return formatted_diff
 
