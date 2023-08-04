@@ -314,11 +314,16 @@ def main():
     #    errors = list(pool.map(execute_merge, repos_metadata))
 
     g_logger.debug(f"repos_metadata: {repos_metadata}")
+    # The list "errors" contains one entry per thread. An entry is either an error-message or None. Remove all
+    # None-values.
+    errors = [error for error in errors if error is not None]
     if errors:
         for error in errors:
             if error is not None:
                 g_logger.error(error)
         sys.exit(1)
+
+    sys.exit(0)
 
 
 if __name__ == '__main__':
