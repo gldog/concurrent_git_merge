@@ -43,60 +43,85 @@ def configure_logger(log_level, logs_dir):
 def init_argument_parser():
     # The '%' is a special character and has to be escaped by another '%'
     parser = argparse.ArgumentParser(
-        # The RawTextHelpFormatter allows leves newlines. This allows formatted output of the --repo-names description.
+        # The RawTextHelpFormatter allows leves newlines. This allows formatted output of the --repos-data description.
         formatter_class=lambda prog: argparse.RawTextHelpFormatter(prog, width=120),
 
         # -- 50 --------------- | ---------------------------------------------------------------- 100 -- #
         description=textwrap.dedent("""\
         This script do merges in a list of repos. For each repo, a source-branch and a dest-branch must be
-        given. Source- and dest-branches can be given individually for each repo, and as defaults to be used
-        in multiple repos sharing these branch-names.
+        given. Source- and dest-branches can be given individually for each repo, and as defaults to be
+        used in multiple repos sharing these branch-names.
 
-        The merges are executed in parallel.
+        The merges are executed in parallel. For each task a logfile is written.
 
-        This script do not clone the repos. This is because you might post-process cloned repo, e.g. install
-        merge-drivers.
+        This script do not clone the repos. This is because you might post-process cloned repos, e.g.
+        install merge-drivers.
 
         Before each merge, an optional pre-merge-script can be executed, given in parameter
-        -e/--exec-pre-merge-script. This script is executed in each repo's merge-task, means it runs parallel.
-        Here you can clone the repos, install merge-drivers, and others.
-        This script runs in an environment with following environment variables exported:
-            o BASE_URL          As parameter -u
-            o PROJECT_KEY       From parameter -n the 'PRJ' part
-            o REPO_NAME         From parameter -n the 'REPO' part
-            o SOURCE_BRANCH     From parameter -n the 'SOURCE_BRANCH' part, or the default-source-branch -S if absent
-            o DEST_BRANCH       From parameter -n the 'DEST_BRANCH' part, or the default-dest-branch -D if absent
-            o REPO_DIR          Parameter -d, extended by the 'REPO' part of parameter -n """))
-    parser.add_argument('-u', '--base-url', help="Remote base URL.")
-    parser.add_argument('-n', '--repo-names', required=True, nargs='+',
-                        metavar='PRJ/REPO|PRJ/REPO:SOURCE_BRANCH:DEST_BRANCH',
+        -e/--exec-pre-merge-script."""))
+    parser.add_argument('-r', '--repos-data', required=True, nargs='+',
                         # ---------------------------------------------------------------- 100 -- #
                         help=textwrap.dedent("""\
-                        Names of the repos to be processed in the format prj/repo:source-branch:dest-branch.
-                        'prj' means the bitbucket-project-key, and 'repo' the name of the cloned repo
-                        in the filesystem.
-                        Valid formats are:
-                          o prj/repo:source-branch:dest-branch  (no defaults taken into account)
-                          o prj/repo  (branches default to --default-source-branch and --default-dest-branch)
-                          o prj/repo:source-branch:  (dest-branch omitted, defaults to --default-dest-branch)
-                          o prj/repo::dest-branch  (source-branch omitted, defaults to --default-source-branch)
-                          o prj/repo::  (same as PRJ/repo)
-                        The repos given in this parameter should exist in --repos-dir. This script does
-                        not clone missing repos. If a repo is missing, its merge will be skipped and an
-                        error-message will be printed. But all existing repos will be merged."""))
+                        Information of the repos and branches to be processed. They are given as
+                        positional parts, delimited by colon ':':
+                            1. repo-local-name
+                            2. source-branch
+                            3. dest-branch
+                            4. prj/repo-remote-name
+                        1. 'repo-local-name', mandatory. 
+                            The name of the repo as it exists in the repos-directory.
+                        2. 'source-branch', optional
+                            The branch to be merged into the dest-branch. If omitted it falls back
+                            to -S/--default-source-branch. At lest one of the two must be given.
+                        3. 'dest-branch', optional
+                         The branch to be updated from the source-branch. If omitted it falls back
+                            to -D/--default-dest-branch. At lest one of the two must be given.
+                        4. 'prj/repo-remote-name', optional
+                            The remote project- and repo-name. Exposed as environment variables to
+                            the script given in -e/--exec-pre-merge-script.
+                            The 'prj'-part is the Bitbucket-project or the Github-username.
+                        The full notation is:
+                                -r repo-local-name:source-branch:dest-branch:prj/repo-remote-name
+                        Optional parts may be empty:
+                                -r repo-local-name:::
+                        But delimiters of empty parts can be omitted from right to left.
+                        The above parameter can be given as:
+                                -r repo-local-name 
+                        The repos given in this parameter should exist in -d/--repos-dir. This
+                        script does not clone missing repos. If a repo is missing, its merge-task
+                        will be aborted and an error-message will be printed. But all existing
+                        repos will be merged.
+                        Examples:
+                        1) One Repo with source- and dest-branches
+                                -r my-repo-1:origin/master:my-feature
+                            The last part 'prj/repo-remote-name' is not given, the last delimiter
+                            ':' can be omitted.
+                        2) Two Repos sharing source- and -dest-branch-names
+                                -r product1-module-a product1-module-b -S origin/master -D my-feature
+                            That is the short notation. As the parts delimited by colon ':', the
+                            full also valid notation would be:
+                                -r product1-module-a::: product1-module-b::: -S origin/master -D my-feature
+                        3) As example 2), but with abbreviated local repo-names, and
+                            'prj/repo-remote-name' given to be exposed to the pre-merge-script.
+                            Because the parts are positional the delimiters must be given.
+                                -r p1-m-a:::products/product1-module-a \\
+                                   p1-m-b:::products/product1-module-a \\
+                                   -S origin/master -D my-feature \\
+                                   -e clone_if_absent_and_install_merge-drivers.sh"""))
     parser.add_argument('-d', '--repos-dir', required=True,
                         help="Directory the repos resides.")
     parser.add_argument('-o', '--logs-dir', required=True,
                         help=textwrap.dedent("""\
-                        Log-directory. Each run of this script creates a subdirectory with a timestamp."""))
+                        Log-directory. Each run of this script creates a subdirectory with a
+                        timestamp."""))
     parser.add_argument('-S', '--default-source-branch', default='',
-                        help="Default source branch.")
+                        help="Default source branch used for repos without given source-branch .")
     parser.add_argument('-D', '--default-dest-branch', default='',
-                        help="Default destination branch.")
+                        help="Default destination branch used for repos without given dest-branch.")
     parser.add_argument('-m', '--merge-branch-pattern',
                         help=textwrap.dedent("""\
-                        Create a merge-branch based on the dest-branch and do the merge in this branch.
-                        if the merge-branch exists it will be deleted and re-created.
+                        Create a merge-branch based on the dest-branch and do the merge in this
+                        branch. If the merge-branch exists it will be deleted and re-created.
                         The pattern understands the following placeholders:
                           o %%SBR           Source-branch name
                           o %%DBR           Dest-branch name
@@ -104,20 +129,42 @@ def init_argument_parser():
                                 https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes.
                                 E.g. %%DATE(%%d%%b) will be replaced with '01Jan'.
                                 In a Unix shell you can also use $(date +%%d%%b). But the %%DATE()
-                                placeholder is portable because Python does the formatting rather than an
-                                external command."""))
-    parser.add_argument('-l', '--log_level', choices=LOG_LEVELS, default=DEFAULT_LOGLEVEL,
+                                placeholder is portable because Python does the formatting rather
+                                than an external command."""))
+    parser.add_argument('--local', default=False, action='store_true',
+                        help=textwrap.dedent("""\
+                        Skip the git pull command. Allows to merge a local-only source-branch that
+                        has no tracking remote-branch."""))
+    parser.add_argument('-l', '--log-level', choices=LOG_LEVELS, default=DEFAULT_LOGLEVEL,
                         help=f"Defaults to {DEFAULT_LOGLEVEL}.")
     parser.add_argument('-e', '--exec-pre-merge-script',
-                        help="Execute this script for each repo before the merge starts.")
+                        help=textwrap.dedent("""\
+                        This script is executed in each repo's merge-task, means it runs parallel.
+                        Here you can clone the repos, install merge-drivers, and others.
+                        This script runs in an environment with repo-specific environment variables
+                        exposed:                        
+                        o MR_REPO_LOCAL_NAME    From parameter -r the 'repo-local-name' part.
+                        o MR_SOURCE_BRANCH      From parameter -r the 'source-branch' part, or the
+                                                default-source-branch -S if absent.
+                        o MR_DEST_BRANCH        From parameter -r the 'dest-branch' part, or the
+                                                default-dest-branch -D if absent.
+                        o MR_REPO_DIR           Parameter -d, extended by a timestamp and the
+                                                'repo-local-name' part of parameter -r.
+                        o MR_PROJECT_KEY        From parameter -r the 'prj' part.
+                        o MR_REPO_REMOTE_NAME   From parameter -r the 'repo-remote-name' part."""))
 
     return parser
 
 
-def split_into_repo_metadata(repo: str):
-    # Spit the parameter repo into project_key, repo_name, source_branch, dest_branch.
+def make_repo_metadata(repo_data_from_parameter: str):
+    # Spit the parameter repo_data_from_parameter into:
+    #   o repo_local_name
+    #   o source_branch
+    #   o dest_branch
+    #   o project_key
+    #   o repo_remote_name
     #
-    # A repo is given either bare 'prj/repo' or with source- and dest-branch 'prj/repo:source-branch:dest-branch'.
+    # The repo_data_from_parameter is given either bare 'some-repo' or with additional data.
     # Emtpy branches are valid, they default to the default-source-branch or default-dest-branch.
     # Valid forms of repo are:
     #   o prj/repo:source-branch:dest-branch  (no defaults taken into account)
@@ -126,49 +173,51 @@ def split_into_repo_metadata(repo: str):
     #   o prj/repo::dest-branch  (source-branch omitted, defaults to --default-source-branch)
     #   o prj/repo::  (same as PRJ/repo)
     #
-    parts = re.split(':', repo)
-    error_msg = f"Given repo '{repo}' has unexpected format. " + \
-                "See help for parameter -n/--repo-names for accepted formats."
-    if len(parts) not in [1, 3]:
+    parts = re.split(':', repo_data_from_parameter)
+    error_msg = f"Given repo_data '{repo_data_from_parameter}' has unexpected format. " + \
+                "See help for parameter -r/--repos-data for accepted formats."
+
+    # Expect a length between 1 and 4.
+    if len(parts) not in range(1, 5):
         raise ValueError(error_msg)
-    project_and_repo = parts[0].strip()
-    if not project_and_repo:
-        raise ValueError(error_msg)
-    url_parts = re.split('/', project_and_repo)
-    if not len(url_parts) == 2:
-        # Expect e.g. 'PRJ/repo'
-        raise ValueError(error_msg)
-    project_key = url_parts[0].strip()
-    repo_name = url_parts[1].strip()
-    if not project_key or not repo_name:
-        raise ValueError(error_msg)
-    if len(parts) == 3:
-        source_branch = parts[1].strip()
-        dest_branch = parts[2].strip()
-    else:
-        source_branch = ''
-        dest_branch = ''
-    return project_key, repo_name, source_branch, dest_branch
+
+    # Extend to 5 entries.
+    parts = [*parts, *([''] * (4 - len(parts)))]
+    repo_metadata = {'repo_data_from_parameter': repo_data_from_parameter}
+    repo_local_name = parts[0].strip()
+    if repo_local_name:
+        repo_metadata['repo_local_name'] = repo_local_name
+    source_branch = parts[1].strip()
+    if source_branch:
+        repo_metadata['source_branch'] = source_branch
+    dest_branch = parts[2].strip()
+    if dest_branch:
+        repo_metadata['dest_branch'] = dest_branch
+    remote_project_key_and_repo_name = parts[3].strip()
+    if remote_project_key_and_repo_name:
+        remote_project_key_and_repo_name_parts = re.split('/', parts[3])
+        if not len(remote_project_key_and_repo_name_parts) == 2:
+            # Expect e.g. 'prj1/repo1'
+            raise ValueError(error_msg)
+        project_key = remote_project_key_and_repo_name_parts[0].strip()
+        repo_metadata['project_key'] = project_key
+        repo_remote_name = remote_project_key_and_repo_name_parts[1].strip()
+        repo_metadata['repo_remote_name'] = repo_remote_name
+
+    return repo_metadata
 
 
-def make_repos_metadata(repos: List[str], default_source_branch: str, default_dest_branch: str):
+def make_repos_metadata(repos_data: List[str], default_source_branch: str, default_dest_branch: str):
     """
-    Transform the repos given in command line parameter -n/--repo-names into dict of following format:
+    Transform the repos given in command line parameter -r/--repo-names into dict of following format:
 
         [
             {
+                'repo_local_name': 'repo1',
+                'source_branch': 'stable-tag-1',
+                'dest_branch': 'my-feature-branch',
                 'project_key': 'prj1',
-                'repo_name': 'repo1',
-                'source_branch':
-                'stable-tag-1',
-                'dest_branch': 'my-feature-branch'
-            },
-            {
-                'project_key': 'prj1',
-                'repo_name': 'repo2',
-                'source_branch':
-                'stable-tag-1',
-                'dest_branch': 'my-feature-branch'
+                'repo_remote_name': 'repository-with-long-name1',
             },
             ...
         ]
@@ -176,15 +225,14 @@ def make_repos_metadata(repos: List[str], default_source_branch: str, default_de
     default_source_branch = default_source_branch.strip()
     default_dest_branch = default_dest_branch.strip()
     repos_metadata = []
-    for repo in repos:
-        project_key, repo_name, source_branch, dest_branch = split_into_repo_metadata(repo)
-        if not source_branch:
-            source_branch = default_source_branch
-        if not dest_branch:
-            dest_branch = default_dest_branch
-        repos_metadata.append(
-            {'project_key': project_key, 'repo_name': repo_name,
-             'source_branch': source_branch, 'dest_branch': dest_branch})
+    for repo_data in repos_data:
+        # repo_data is the value given in parameter -r/--repos-data.
+        repo_metadata = make_repo_metadata(repo_data)
+        if 'source_branch' not in repo_metadata:
+            repo_metadata['source_branch'] = default_source_branch
+        if 'dest_branch' not in repo_metadata:
+            repo_metadata['dest_branch'] = default_dest_branch
+        repos_metadata.append(repo_metadata)
     return repos_metadata
 
 
@@ -192,18 +240,29 @@ def validate_repos_metadata(repos_metadata):
     """
     Check for completeness of each repo's metadata.
 
-    Each repo needs a source-branch and a dest-branch. They can be given in parameter -n/--repo-names, or as default
+    Each repo needs a source-branch and a dest-branch. They can be given in parameter -r/--repos-data, or as default
     in -S/--default-source-branch and -D/--default-dest-branch. But if not given, the merge can't be started. This
     is a configuration error.
     """
+
     errors = []
+    # Collect the repo-local-names to check if they are unique.
+    repo_local_names = set()
     for repo_metadata in repos_metadata:
-        project_key = repo_metadata['project_key']
-        repo_name = repo_metadata['repo_name']
+        repo_data_from_parameter = repo_metadata['repo_data_from_parameter']
+        repo_local_name = repo_metadata['repo_local_name']
+        if not repo_local_name:
+            errors.append(f"Missing repo-local-name in repo-data '{repo_data_from_parameter}'")
+        else:
+            repo_local_names.add(repo_local_name)
         if not repo_metadata['source_branch']:
-            errors.append(f"Missing source-branch for repo '{project_key}/{repo_name}'")
+            errors.append(f"Missing source-branch in or for repo-data '{repo_data_from_parameter}'")
         if not repo_metadata['dest_branch']:
-            errors.append(f"Missing dest-branch for repo '{project_key}/{repo_name}'")
+            errors.append(f"Missing dest-branch in or for repo-data '{repo_data_from_parameter}'")
+        # The project-key and repo-remote-name are optional.
+    if len(repo_local_names) < len(repos_metadata):
+        errors.append(f"Repo-short-names not unique.")
+
     return errors
 
 
@@ -213,9 +272,9 @@ def log_task(logfile_name: str, logfile_content: str):
         f.write(logfile_content)
 
 
-def run_command(command, command_shorten_for_log, repo_displayname_for_log, logfile_name, honor_returncode=True,
+def run_command(command, command_pretty_print_for_log, repo_displayname_for_log, logfile_name, honor_returncode=True,
                 env=None):
-    g_logger.info(f"{repo_displayname_for_log}: $ {command_shorten_for_log}")
+    g_logger.info(f"{repo_displayname_for_log}: $ {command_pretty_print_for_log}")
     log_task(logfile_name, f"$ {command}\n")
     timestamp_begin = datetime.now()
     r = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, env=env)
@@ -233,8 +292,8 @@ def run_command(command, command_shorten_for_log, repo_displayname_for_log, logf
 
 def run_commands(commands: List[str], remove_str, repo_displayname_for_logging, logfile_name):
     for command in commands:
-        command_shorten_for_log = command.replace(remove_str, '')
-        run_command(command, command_shorten_for_log, repo_displayname_for_logging, logfile_name)
+        command_pretty_print_for_log = command.replace(remove_str, '')
+        run_command(command, command_pretty_print_for_log, repo_displayname_for_logging, logfile_name)
 
 
 def make_mergebranch_name(merge_branch_pattern, source_branch, dest_branch):
@@ -249,55 +308,59 @@ def make_mergebranch_name(merge_branch_pattern, source_branch, dest_branch):
 
 def execute_merge(repo_metadata):
     task_start_timestamp = datetime.now()
-    project_key = repo_metadata['project_key']
-    repo_name = repo_metadata['repo_name']
+    repo_local_name = repo_metadata['repo_local_name']
     source_branch = repo_metadata['source_branch']
     dest_branch = repo_metadata['dest_branch']
-    logfile_name = f'{project_key}--{repo_name}.log'
-    g_logger.info(f"Started merge-task for {project_key}/{repo_name}.")
-    log_task(logfile_name, f"Started merge-task for {project_key}/{repo_name}.")
+    logfile_name = f'repo--{repo_local_name}.log'
+    log_msg = f"Started merge-task for {repo_local_name}."
+    g_logger.info(log_msg)
+    log_task(logfile_name, f"{log_msg}\n")
 
     task_finish_status = "successfully"
     try:
-        global g_cl_args
-        repo_dir = pathlib.Path(g_cl_args.repos_dir, repo_name)
-        repo_displayname_for_logging = f'{project_key}/{repo_name}'
+        repo_dir = pathlib.Path(g_cl_args.repos_dir, repo_local_name)
+        repo_displayname_for_logging = repo_local_name
 
         if g_cl_args.exec_pre_merge_script:
             env = os.environ.copy()
-            env['REPOS_DIR'] = g_cl_args.repos_dir
-            if g_cl_args.base_url:
-                env['BASE_URL'] = g_cl_args.base_url.rstrip('/')
-            env['PROJECT_KEY'] = project_key
-            env['REPO_NAME'] = repo_name
-            env['SOURCE_BRANCH'] = source_branch
-            env['DEST_BRANCH'] = dest_branch
-            env['REPO_DIR'] = str(repo_dir)
+            env['MR_REPOS_DIR'] = g_cl_args.repos_dir
+            env['MR_REPO_LOCAL_NAME'] = repo_local_name
+            env['MR_SOURCE_BRANCH'] = source_branch
+            env['MR_DEST_BRANCH'] = dest_branch
+            env['MR_REPO_DIR'] = str(repo_dir)
+            if 'project_key' in repo_metadata:
+                env['MR_PROJECT_KEY'] = repo_metadata['project_key']
+            if 'repo_remote_name' in repo_metadata:
+                env['MR_REPO_REMOTE_NAME'] = repo_metadata['repo_remote_name']
+
             command = g_cl_args.exec_pre_merge_script
             run_command(command, command, repo_displayname_for_logging, logfile_name, env=env)
 
         # The repo is expected to be present.
         if not pathlib.Path(repo_dir, '.git').is_dir():
             raise Exception(
-                f"Repo '{project_key}/{repo_name}' is given in parameter -n/--repo-names, " +
-                f"but it is missing in {g_cl_args.repos_dir} given in parameter -d/--repos-dir.")
+                f"Repo '{repo_local_name}' is given in parameter " +
+                f"-r/--repos-data {repo_metadata['repo_data_from_parameter']}, " +
+                f"but it is missing in parameter -d/--repos-dir {g_cl_args.repos_dir}.")
 
         commands = [
             f'git -C {repo_dir} reset --hard',
             f'git -C {repo_dir} clean -fd',
-            f'git -C {repo_dir} checkout {dest_branch}',
-            f'git -C {repo_dir} pull --ff'
+            f'git -C {repo_dir} checkout {dest_branch}'
         ]
+        if not g_cl_args.local:
+            commands.append(f'git -C {repo_dir} pull --ff')
+
         run_commands(commands, f' -C {repo_dir}', repo_displayname_for_logging, logfile_name)
+        commands.clear()
 
         if g_cl_args.merge_branch_pattern:
             merge_branch = make_mergebranch_name(g_cl_args.merge_branch_pattern, source_branch, dest_branch)
             # Delete the merge-branch if it exists.
             command = f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{merge_branch}'
-            command_shorten_for_log = command.replace(f' -C {repo_dir}', '')
-            r = run_command(command, command_shorten_for_log, repo_displayname_for_logging, logfile_name,
+            command_pretty_print_for_log = command.replace(f' -C {repo_dir}', '')
+            r = run_command(command, command_pretty_print_for_log, repo_displayname_for_logging, logfile_name,
                             honor_returncode=False)
-            commands.clear()
             if r.returncode == 0:
                 commands.append(f'git -C {repo_dir} branch -D {merge_branch}')
             else:
@@ -317,8 +380,9 @@ def execute_merge(repo_metadata):
         repo_metadata['task_end'] = task_end_timestamp.isoformat()
         task_duration = task_end_timestamp - task_start_timestamp
         repo_metadata['task_duration'] = str(task_duration)
-        g_logger.info(f"Finished merge-task for {project_key}/{repo_name} {task_finish_status}.")
-        log_task(logfile_name, f"Finished merge-task for {project_key}/{repo_name} {task_finish_status}.")
+        log_msg = f"Finished merge-task for '{repo_local_name}' {task_finish_status}."
+        g_logger.info(log_msg)
+        log_task(logfile_name, log_msg)
         log_task(logfile_name, f"Merge-task statistics:\n{json.dumps(repo_metadata, indent=2)}")
 
 
@@ -360,7 +424,7 @@ def main():
 
     g_logger.debug(f"args: {g_cl_args}")
 
-    repos_metadata = make_repos_metadata(g_cl_args.repo_names, g_cl_args.default_source_branch,
+    repos_metadata = make_repos_metadata(g_cl_args.repos_data, g_cl_args.default_source_branch,
                                          g_cl_args.default_dest_branch)
     g_logger.debug(f"repos_metadata: {repos_metadata}")
     errors = validate_repos_metadata(repos_metadata)
