@@ -79,7 +79,8 @@ def init_argument_parser():
                         4. 'prj/repo-remote-name', optional
                             The remote project- and repo-name. Exposed as environment variables to
                             the script given in -e/--exec-pre-merge-script.
-                            The 'prj'-part is the Bitbucket-project or the Github-username.
+                            The 'prj'-part is the Bitbucket-project or the Github-username or the 
+                            Gitlab namespace.
                         The full notation is:
                                 -r repo-local-name:source-branch:dest-branch:prj/repo-remote-name
                         Optional parts may be empty:
@@ -150,8 +151,7 @@ def init_argument_parser():
                                                 default-dest-branch -D if absent.
                         o MR_REPO_DIR           Parameter -d, extended by a timestamp and the
                                                 'repo-local-name' part of parameter -r.
-                        o MR_PROJECT_KEY        From parameter -r the 'prj' part.
-                        o MR_REPO_REMOTE_NAME   From parameter -r the 'repo-remote-name' part."""))
+                        o MR_PRJ_REPO_REMOTE_NAME   From parameter -r the part 'prj/repo-remote-name'."""))
 
     return parser
 
@@ -161,17 +161,7 @@ def make_repo_metadata(repo_data_from_parameter: str):
     #   o repo_local_name
     #   o source_branch
     #   o dest_branch
-    #   o project_key
-    #   o repo_remote_name
-    #
-    # The repo_data_from_parameter is given either bare 'some-repo' or with additional data.
-    # Emtpy branches are valid, they default to the default-source-branch or default-dest-branch.
-    # Valid forms of repo are:
-    #   o prj/repo:source-branch:dest-branch  (no defaults taken into account)
-    #   o prj/repo  (branches default to --default-source-branch and --default-dest-branch)
-    #   o prj/repo:source-branch:  (dest-branch omitted, defaults to --default-dest-branch)
-    #   o prj/repo::dest-branch  (source-branch omitted, defaults to --default-source-branch)
-    #   o prj/repo::  (same as PRJ/repo)
+    #   o prj/repo_remote_name
     #
     parts = re.split(':', repo_data_from_parameter)
     error_msg = f"Given repo_data '{repo_data_from_parameter}' has unexpected format. " + \
@@ -193,16 +183,9 @@ def make_repo_metadata(repo_data_from_parameter: str):
     dest_branch = parts[2].strip()
     if dest_branch:
         repo_metadata['dest_branch'] = dest_branch
-    remote_project_key_and_repo_name = parts[3].strip()
-    if remote_project_key_and_repo_name:
-        remote_project_key_and_repo_name_parts = re.split('/', parts[3])
-        if not len(remote_project_key_and_repo_name_parts) == 2:
-            # Expect e.g. 'prj1/repo1'
-            raise ValueError(error_msg)
-        project_key = remote_project_key_and_repo_name_parts[0].strip()
-        repo_metadata['project_key'] = project_key
-        repo_remote_name = remote_project_key_and_repo_name_parts[1].strip()
-        repo_metadata['repo_remote_name'] = repo_remote_name
+    prj_and_repo_remote_name = parts[3].strip()
+    if prj_and_repo_remote_name:
+        repo_metadata['prj_and_repo_remote_name'] = prj_and_repo_remote_name
 
     return repo_metadata
 
@@ -216,8 +199,7 @@ def make_repos_metadata(repos_data: List[str], default_source_branch: str, defau
                 'repo_local_name': 'repo1',
                 'source_branch': 'stable-tag-1',
                 'dest_branch': 'my-feature-branch',
-                'project_key': 'prj1',
-                'repo_remote_name': 'repository-with-long-name1',
+                'prj_and_repo_remote_name': 'prj1/repository-with-long-name1',
             },
             ...
         ]
@@ -259,7 +241,7 @@ def validate_repos_metadata(repos_metadata):
             errors.append(f"Missing source-branch in or for repo-data '{repo_data_from_parameter}'")
         if not repo_metadata['dest_branch']:
             errors.append(f"Missing dest-branch in or for repo-data '{repo_data_from_parameter}'")
-        # The project-key and repo-remote-name are optional.
+        # The 'prj/repo-remote-name' part ist optional.
     if len(repo_local_names) < len(repos_metadata):
         errors.append(f"Repo-short-names not unique.")
 
@@ -328,10 +310,8 @@ def execute_merge(repo_metadata):
             env['MR_SOURCE_BRANCH'] = source_branch
             env['MR_DEST_BRANCH'] = dest_branch
             env['MR_REPO_DIR'] = str(repo_dir)
-            if 'project_key' in repo_metadata:
-                env['MR_PROJECT_KEY'] = repo_metadata['project_key']
-            if 'repo_remote_name' in repo_metadata:
-                env['MR_REPO_REMOTE_NAME'] = repo_metadata['repo_remote_name']
+            if 'prj_and_repo_remote_name' in repo_metadata:
+                env['MR_PRJ_REPO_REMOTE_NAME'] = repo_metadata['prj_and_repo_remote_name']
 
             command = g_cl_args.exec_pre_merge_script
             run_command(command, command, repo_displayname_for_logging, logfile_name, env=env)
