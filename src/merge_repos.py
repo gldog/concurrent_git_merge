@@ -296,26 +296,25 @@ def execute_merge(repo_metadata):
     repo_local_name = repo_metadata['repo_local_name']
     source_branch = repo_metadata['source_branch']
     dest_branch = repo_metadata['dest_branch']
+    repo_dir = pathlib.Path(g_cl_args.repos_dir, repo_local_name)
+    # Need str() here to avoid "TypeError: Object of type PosixPath is not JSON serializable".
+    repo_metadata['repo_dir'] = str(pathlib.Path(g_cl_args.repos_dir, repo_local_name))
+    repo_metadata['repos_dir'] = g_cl_args.repos_dir
     logfile_name = f'repo--{repo_local_name}.log'
     log_msg = f"Started merge-task for {repo_local_name}."
     g_logger.info(log_msg)
     log_task(logfile_name, f"{log_msg}\n")
+    log_task(logfile_name, f"repo_metadata at task-begin:\n{json.dumps(repo_metadata, indent=2)}\n")
 
     task_finish_status = "successfully"
     try:
-        repo_dir = pathlib.Path(g_cl_args.repos_dir, repo_local_name)
         repo_displayname_for_logging = repo_local_name
 
         if g_cl_args.exec_pre_merge_script:
             env = os.environ.copy()
-            env['MR_REPOS_DIR'] = g_cl_args.repos_dir
-            env['MR_REPO_LOCAL_NAME'] = repo_local_name
-            env['MR_SOURCE_BRANCH'] = source_branch
-            env['MR_DEST_BRANCH'] = dest_branch
-            env['MR_REPO_DIR'] = str(repo_dir)
-            if 'prj_and_repo_remote_name' in repo_metadata:
-                env['MR_PRJ_REPO_REMOTE_NAME'] = repo_metadata['prj_and_repo_remote_name']
-
+            for key, value in repo_metadata.items():
+                env_var_name = f"MR_{key.upper()}"
+                env[env_var_name] = value
             command = g_cl_args.exec_pre_merge_script
             run_command(command, command, repo_displayname_for_logging, logfile_name, env=env)
 
@@ -366,7 +365,7 @@ def execute_merge(repo_metadata):
         log_msg = f"Finished merge-task for '{repo_local_name}' {task_finish_status}."
         g_logger.info(log_msg)
         log_task(logfile_name, log_msg)
-        log_task(logfile_name, f"Merge-task statistics:\n{json.dumps(repo_metadata, indent=2)}")
+        log_task(logfile_name, f"repo_metadata at task-end:\n{json.dumps(repo_metadata, indent=2)}\n")
 
 
 def get_formatted_timediff_mmss(time_diff: timedelta) -> str:
