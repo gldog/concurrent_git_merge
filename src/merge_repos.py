@@ -60,27 +60,26 @@ def init_argument_parser():
         Before each merge, an optional pre-merge-script can be executed, given in parameter
         -e/--exec-pre-merge-script."""))
     parser.add_argument('-r', '--repos-data', required=True, nargs='+',
+                        metavar='repo-local-name:[source-branch]:[dest-branch]:[prj/repo-remote-name]',
                         # ---------------------------------------------------------------- 100 -- #
                         help=textwrap.dedent("""\
-                        Information of the repos and branches to be processed. They are given as
-                        positional parts, delimited by colon ':':
-                            1. repo-local-name
-                            2. source-branch
-                            3. dest-branch
-                            4. prj/repo-remote-name
-                        1. 'repo-local-name', mandatory. 
-                            The name of the repo as it exists in the repos-directory.
-                        2. 'source-branch', optional
-                            The branch to be merged into the dest-branch. If omitted it falls back
-                            to -S/--default-source-branch. At lest one of the two must be given.
-                        3. 'dest-branch', optional
-                         The branch to be updated from the source-branch. If omitted it falls back
-                            to -D/--default-dest-branch. At lest one of the two must be given.
-                        4. 'prj/repo-remote-name', optional
-                            The remote project- and repo-name. Exposed as environment variables to
-                            the script given in -e/--exec-pre-merge-script.
-                            The 'prj'-part is the Bitbucket-project or the Github-username or the 
-                            Gitlab namespace.
+                        Information about the repos and branches to be processed. They are given as
+                        positional parts, delimited by colon ':'.
+                            1. 'repo-local-name', mandatory. 
+                                The name of the repo as it exists in the repos-directory.
+                            2. 'source-branch', optional
+                                The branch to be merged into the dest-branch. If omitted it falls
+                                back to -S/--default-source-branch. At lest one of the two must be
+                                given.
+                            3. 'dest-branch', optional
+                                The branch to be updated from the source-branch. If omitted it
+                                falls back to -D/--default-dest-branch. At lest one of the two must
+                                be given.
+                            4. 'prj/repo-remote-name', optional
+                                The remote project- and repo-name. Exposed as environment variable
+                                to the script given in -e/--exec-pre-merge-script.
+                                The 'prj'-part is the Bitbucket-project or the Github-username or 
+                                the Gitlab namespace.
                         The full notation is:
                                 -r repo-local-name:source-branch:dest-branch:prj/repo-remote-name
                         Optional parts may be empty:
@@ -93,18 +92,21 @@ def init_argument_parser():
                         will be aborted and an error-message will be printed. But all existing
                         repos will be merged.
                         Examples:
-                        1) One Repo with source- and dest-branches
+                        1) One Repo with source- and dest-branches given
                                 -r my-repo-1:origin/master:my-feature
                             The last part 'prj/repo-remote-name' is not given, the last delimiter
                             ':' can be omitted.
                         2) Two Repos sharing source- and -dest-branch-names
-                                -r product1-module-a product1-module-b -S origin/master -D my-feature
-                            That is the short notation. As the parts delimited by colon ':', the
-                            full also valid notation would be:
-                                -r product1-module-a::: product1-module-b::: -S origin/master -D my-feature
+                                -r product1-module-a product1-module-b \\
+                                    -S origin/master -D my-feature
+                            That is the short notation. As the parts are delimited by colon ':',
+                            the full also valid notation would be:
+                                -r product1-module-a::: product1-module-b::: \\
+                                    -S origin/master -D my-feature
                         3) As example 2), but with abbreviated local repo-names, and
-                            'prj/repo-remote-name' given to be exposed to the pre-merge-script.
-                            Because the parts are positional the delimiters must be given.
+                            'prj/repo-remote-name' given to be exposed to the pre-merge-script as
+                            named on the remote. Because the parts are positional, the delimiters
+                            must be given.
                                 -r p1-m-a:::products/product1-module-a \\
                                    p1-m-b:::products/product1-module-a \\
                                    -S origin/master -D my-feature \\
@@ -126,7 +128,8 @@ def init_argument_parser():
                         The pattern understands the following placeholders:
                           o %%SBR           Source-branch name
                           o %%DBR           Dest-branch name
-                          o %%DATE(format)  Date. For format see 'strftime() and strptime() Format Codes'
+                          o %%DATE(format)  Date.
+                                For format see 'strftime() and strptime() Format Codes'
                                 https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes.
                                 E.g. %%DATE(%%d%%b) will be replaced with '01Jan'.
                                 In a Unix shell you can also use $(date +%%d%%b). But the %%DATE()
