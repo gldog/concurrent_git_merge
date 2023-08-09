@@ -289,14 +289,40 @@ def run_commands(commands: List[str], remove_str, repo_displayname_for_logging, 
         run_command(command, command_pretty_print_for_log, repo_displayname_for_logging, logfile_name)
 
 
-def make_mergebranch_name(merge_branch_pattern, source_branch, dest_branch):
-    merge_branch = merge_branch_pattern.replace('%SBR', source_branch).replace('%DBR', dest_branch)
-    m = re.search(r'%DATE\((.+)\)', merge_branch_pattern)
-    if m:
-        strftime_format = m.group(1)
-        formatted_date = g_start_timestamp.strftime(strftime_format)
-        merge_branch = re.sub(r'%DATE\(.+\)', formatted_date, merge_branch)
-    return merge_branch
+def make_mergebranch_name(merge_branch_template, rm):
+    """
+    The formatted string, probably with values from "rm" replaced.
+
+    Example:
+
+    The following bash-script composes the command line for merge_repos.py. The last two "parameters+=" lines
+    defines the string-template for the merge-branch.
+
+    The usage of single-quotes is important:
+    The funktion make_mergebranch_name() uses an inner-f-string-quoting of double-quotes. So the quotes used in
+    the f-string defined in the bash-script must be single-quotes.
+
+        #!/bin/bash
+        parameters=" --repos-data"
+        parameters+=" mb:origin/master:test-feature-branch:prj/repo1"
+        parameters+=" td:origin/master:test-feature-branch:prj/repo2"
+        parameters+=" --repos-dir $REPOS_DIR"
+        parameters+=" --logs-dir $LOGS_DIR"
+        parameters+=" --log-level DEBUG"
+        parameters+=" --exec-pre-merge-script clone_repos_and_install_merge-drivers.sh"
+        parameters+=" --merge-branch-pattern maintain/dsm_{rm['source_branch'].replace('origin/','')}"
+        parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%b%d')}"
+        python3 ../../src/merge_repos.py $parameters
+
+    Thanks to kadee: https://stackoverflow.com/questions/42497625/how-to-postpone-defer-the-evaluation-of-f-strings
+
+    :param merge_branch_template: merge-branch template as for f-strings.
+    :param rm: repo_metadata dict.
+    :return: The template-string with the values replaced.
+    """
+
+    # The parameter "rm" seems to be not used, but it can be used in the merge-branch-template.
+    return eval(f'f"{merge_branch_template}"')
 
 
 def execute_merge(repo_metadata):
@@ -414,7 +440,7 @@ def main():
     # The g_logsdir_with_timestamped_subdir can't be set at the beginning of the script because it contains data
     # from the arg-parser.
     global g_logsdir_with_timestamped_subdir
-    start_timestamp_formatted_str = g_start_timestamp.strftime('%Y%m%d-%H%M%S')
+    start_timestamp_formatted_str = g_script_start.strftime('%Y%m%d-%H%M%S')
     g_logsdir_with_timestamped_subdir = pathlib.Path(g_cl_args.logs_dir, start_timestamp_formatted_str)
     os.makedirs(g_logsdir_with_timestamped_subdir, exist_ok=True)
 
