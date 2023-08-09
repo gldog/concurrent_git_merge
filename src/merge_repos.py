@@ -251,6 +251,14 @@ def validate_repos_metadata(repos_metadata):
     return errors
 
 
+def serialize_datetime_or_propagate(obj):
+    """Tell json.dumps() how to serialize datetime objects."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    else:
+        return obj
+
+
 def log_task(logfile_name: str, logfile_content: str):
     logfile_path = pathlib.Path(g_logsdir_with_timestamped_subdir, logfile_name)
     with open(logfile_path, 'a', newline='') as f:
@@ -297,23 +305,31 @@ def execute_merge(repo_metadata):
     source_branch = repo_metadata['source_branch']
     dest_branch = repo_metadata['dest_branch']
     repo_dir = pathlib.Path(g_cl_args.repos_dir, repo_local_name)
+    repo_metadata['task_start'] = task_start_timestamp
     # Need str() here to avoid "TypeError: Object of type PosixPath is not JSON serializable".
     repo_metadata['repo_dir'] = str(pathlib.Path(g_cl_args.repos_dir, repo_local_name))
     repo_metadata['repos_dir'] = g_cl_args.repos_dir
+
+    if g_cl_args.merge_branch_pattern:
+        repo_metadata['merge_branch'] = make_mergebranch_name(g_cl_args.merge_branch_pattern, repo_metadata)
+
     logfile_name = f'repo--{repo_local_name}.log'
     log_msg = f"Started merge-task for {repo_local_name}."
     g_logger.info(log_msg)
     log_task(logfile_name, f"{log_msg}\n")
-    log_task(logfile_name, f"repo_metadata at task-begin:\n{json.dumps(repo_metadata, indent=2)}\n")
+    log_task(logfile_name, "repo_metadata at task-begin:\n" +
+             f"{json.dumps(repo_metadata, indent=2, default=serialize_datetime_or_propagate)}\n")
 
     task_finish_status = "successfully"
+    # try: run_command() might raise an exception.
     try:
         repo_displayname_for_logging = repo_local_name
-
         if g_cl_args.exec_pre_merge_script:
             env = os.environ.copy()
             for key, value in repo_metadata.items():
                 env_var_name = f"MR_{key.upper()}"
+                if isinstance(value, datetime):
+                    value = value.isoformat()
                 env[env_var_name] = value
             command = g_cl_args.exec_pre_merge_script
             run_command(command, command, repo_displayname_for_logging, logfile_name, env=env)
@@ -337,17 +353,16 @@ def execute_merge(repo_metadata):
         commands.clear()
 
         if g_cl_args.merge_branch_pattern:
-            merge_branch = make_mergebranch_name(g_cl_args.merge_branch_pattern, source_branch, dest_branch)
             # Delete the merge-branch if it exists.
-            command = f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{merge_branch}'
+            command = f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}'
             command_pretty_print_for_log = command.replace(f' -C {repo_dir}', '')
             r = run_command(command, command_pretty_print_for_log, repo_displayname_for_logging, logfile_name,
                             honor_returncode=False)
             if r.returncode == 0:
-                commands.append(f'git -C {repo_dir} branch -D {merge_branch}')
+                commands.append(f'git -C {repo_dir} branch -D {repo_metadata["merge_branch"]}')
             else:
                 log_task(logfile_name, "  (Merge-branch not present)\n\n")
-            commands.append(f'git -C {repo_dir} checkout -b {merge_branch}')
+            commands.append(f'git -C {repo_dir} checkout -b {repo_metadata["merge_branch"]}')
 
         commands.append(
             f'git -C {repo_dir} merge --no-ff --no-edit -Xrenormalize -Xignore-space-at-eol {source_branch}')
@@ -358,14 +373,14 @@ def execute_merge(repo_metadata):
         return str(e)
     finally:
         task_end_timestamp = datetime.now()
-        repo_metadata['task_start'] = task_start_timestamp.isoformat()
-        repo_metadata['task_end'] = task_end_timestamp.isoformat()
+        repo_metadata['task_end'] = task_end_timestamp
         task_duration = task_end_timestamp - task_start_timestamp
         repo_metadata['task_duration'] = str(task_duration)
         log_msg = f"Finished merge-task for '{repo_local_name}' {task_finish_status}."
         g_logger.info(log_msg)
         log_task(logfile_name, log_msg)
-        log_task(logfile_name, f"repo_metadata at task-end:\n{json.dumps(repo_metadata, indent=2)}\n")
+        log_task(logfile_name, "repo_metadata at task-end:\n" +
+                 f"{json.dumps(repo_metadata, indent=2, default=serialize_datetime_or_propagate)}\n")
 
 
 def get_formatted_timediff_mmss(time_diff: timedelta) -> str:
@@ -379,7 +394,8 @@ def get_formatted_timediff_mmss(time_diff: timedelta) -> str:
     total_seconds = time_diff.total_seconds()
     minutes = total_seconds // 60
     seconds = total_seconds % 60
-    formatted_diff = f'{minutes:02.0f}:{seconds:02.2f}'
+    # Seconds-format "05.2f": 5 = 2 digits for seconds + dot + 2 digits for millis.
+    formatted_diff = f'{minutes:02.0f}:{seconds:05.2f}'
 
     return formatted_diff
 
@@ -408,7 +424,7 @@ def main():
 
     repos_metadata = make_repos_metadata(g_cl_args.repos_data, g_cl_args.default_source_branch,
                                          g_cl_args.default_dest_branch)
-    g_logger.debug(f"repos_metadata: {repos_metadata}")
+    g_logger.debug(f"repos_metadata: {json.dumps(repos_metadata, default=serialize_datetime_or_propagate)}")
     errors = validate_repos_metadata(repos_metadata)
     if errors:
         g_logger.error(errors)
@@ -422,7 +438,7 @@ def main():
     # with multiprocessing.Pool() as pool:
     #    errors = list(pool.map(execute_merge, repos_metadata))
 
-    g_logger.debug(f"repos_metadata: {repos_metadata}")
+    g_logger.debug(f"repos_metadata: {json.dumps(repos_metadata, default=serialize_datetime_or_propagate)}")
     # The list "errors" contains one entry per thread. An entry is either an error-message or None. Remove all
     # None-values.
     errors = [error for error in errors if error is not None]
