@@ -378,7 +378,7 @@ def execute_merge(repo_metadata):
         repo_metadata['task_duration'] = str(task_duration)
         log_msg = f"Finished merge-task for '{repo_local_name}' {task_finish_status}."
         g_logger.info(log_msg)
-        log_task(logfile_name, log_msg)
+        log_task(logfile_name, f"{log_msg}\n")
         log_task(logfile_name, "repo_metadata at task-end:\n" +
                  f"{json.dumps(repo_metadata, indent=2, default=serialize_datetime_or_propagate)}\n")
 
