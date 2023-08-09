@@ -18,7 +18,7 @@ LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 DEFAULT_LOGLEVEL = 'INFO'
 SCRIPT_NAME = os.path.splitext(os.path.basename(__file__))[0]
 
-g_start_timestamp = datetime.now()
+g_script_start = datetime.now()
 g_logsdir_with_timestamped_subdir = ''
 g_logger = logging.getLogger()
 
@@ -401,7 +401,7 @@ def get_formatted_timediff_mmss(time_diff: timedelta) -> str:
 
 
 def exit_handler():
-    g_logger.info(f"Script finished, took {get_formatted_timediff_mmss(datetime.now() - g_start_timestamp)}")
+    g_logger.info(f"Script finished, took {get_formatted_timediff_mmss(datetime.now() - g_script_start)}")
 
 
 def main():
