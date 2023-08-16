@@ -1,6 +1,6 @@
 import unittest
 
-from src import merge_repos as main
+from src import merge_git_repos as main
 
 
 class Test01(unittest.TestCase):

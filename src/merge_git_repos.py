@@ -309,7 +309,7 @@ def make_mergebranch_name(merge_branch_template, rm):
 
     Example:
 
-    The following bash-script composes the command line for merge_repos.py. The last two "parameters+=" lines
+    The following bash-script composes the command line for merge_git_repos.py. The last two "parameters+=" lines
     defines the string-template for the merge-branch.
 
     The usage of single-quotes is important:
@@ -326,7 +326,7 @@ def make_mergebranch_name(merge_branch_template, rm):
         parameters+=" --exec-pre-merge-script clone_repos_and_install_merge-drivers.sh"
         parameters+=" --merge-branch-pattern maintain/dsm_{rm['source_branch'].replace('origin/','')}"
         parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%b%d')}"
-        python3 ../../src/merge_repos.py $parameters
+        python3 ../../src/merge_git_repos.py $parameters
 
     Thanks to kadee: https://stackoverflow.com/questions/42497625/how-to-postpone-defer-the-evaluation-of-f-strings
 
@@ -350,8 +350,8 @@ def execute_merge(repo_metadata):
     repo_metadata['repo_dir'] = str(pathlib.Path(g_cl_args.repos_dir, repo_local_name))
     repo_metadata['repos_dir'] = g_cl_args.repos_dir
 
-    if g_cl_args.merge_branch_pattern:
-        repo_metadata['merge_branch'] = make_mergebranch_name(g_cl_args.merge_branch_pattern, repo_metadata)
+    if g_cl_args.merge_branch_template:
+        repo_metadata['merge_branch'] = make_mergebranch_name(g_cl_args.merge_branch_template, repo_metadata)
 
     logfile_name = f'repo--{repo_local_name}.log'
     log_msg = f"Started merge-task for {repo_local_name}."
@@ -392,7 +392,7 @@ def execute_merge(repo_metadata):
         run_commands(commands, f' -C {repo_dir}', repo_displayname_for_logging, logfile_name)
         commands.clear()
 
-        if g_cl_args.merge_branch_pattern:
+        if g_cl_args.merge_branch_template:
             # Delete the merge-branch if it exists.
             command = f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}'
             command_pretty_print_for_log = command.replace(f' -C {repo_dir}', '')

@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from src import merge_repos as main
+from src import merge_git_repos as main
 
 
 class Test03(unittest.TestCase):
