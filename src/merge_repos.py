@@ -157,14 +157,18 @@ def init_argument_parser():
                         Here you can clone the repos, install merge-drivers, and others.
                         This script runs in an environment with repo-specific environment variables
                         exposed:                        
+                        o MR_DEST_BRANCH        From parameter -r the 'dest-branch' part, or the
+                                                default-dest-branch -D if absent.
+                        o MR_MERGE_BRANCH       From parameter -m/--merge-branch-template if given.
+                        o MR_PRJ_AND_REPO_REMOTE_NAME   From parameter -r the part 'prj/repo-remote-name'.
+                        o MR_REPOS_DIR          From parameter -d/--repos-dir. 
+                        o MR_REPO_DATA_FROM_PARAMETER   From parameter -r/--repos-data.
+                        o MR_REPO_DIR           Parameter -d, extended by a timestamp and the
+                                                'repo-local-name' part of parameter -r. 
                         o MR_REPO_LOCAL_NAME    From parameter -r the 'repo-local-name' part.
                         o MR_SOURCE_BRANCH      From parameter -r the 'source-branch' part, or the
                                                 default-source-branch -S if absent.
-                        o MR_DEST_BRANCH        From parameter -r the 'dest-branch' part, or the
-                                                default-dest-branch -D if absent.
-                        o MR_REPO_DIR           Parameter -d, extended by a timestamp and the
-                                                'repo-local-name' part of parameter -r.
-                        o MR_PRJ_REPO_REMOTE_NAME   From parameter -r the part 'prj/repo-remote-name'."""))
+                        o MR_TASK_START         Timestamp the repo's task has been started. """))
 
     return parser
 
