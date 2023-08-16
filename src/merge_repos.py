@@ -121,20 +121,30 @@ def init_argument_parser():
                         help="Default source branch used for repos without given source-branch .")
     parser.add_argument('-D', '--default-dest-branch', default='',
                         help="Default destination branch used for repos without given dest-branch.")
-    parser.add_argument('-m', '--merge-branch-pattern',
+    parser.add_argument('-m', '--merge-branch-template',
                         help=textwrap.dedent("""\
                         Create a merge-branch based on the dest-branch and do the merge in this
                         branch. If the merge-branch exists it will be deleted and re-created.
-                        The pattern understands the following placeholders:
-                          o %%SBR           Source-branch name
-                          o %%DBR           Dest-branch name
-                          o %%DATE(format)  Date.
-                                For format see 'strftime() and strptime() Format Codes'
-                                https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes.
-                                E.g. %%DATE(%%d%%b) will be replaced with '01Jan'.
-                                In a Unix shell you can also use $(date +%%d%%b). But the %%DATE()
-                                placeholder is portable because Python does the formatting rather
-                                than an external command."""))
+                        The template generating the name of the merge-branch understands the
+                        following placeholders (rm means repo-metadata):
+                          o rm['dest_branch']       Dest-branch name.
+                          o rm['branch_branch']     From parameter -m/--merge-branch-template if given.
+                          o rm['prj_and_repo_remote_name']  From parameter -r/--repos-data, the 4th
+                                                    part.
+                          o rm['repos_dir']         From parameter -d/--repos-dir.
+                          o rm['repo_dir']          From parameter -d/--repos-dir, supplemented by
+                                                    the repo_local_name.
+                          o rm['repo_local_name']   From parameter -r/--repos-data, the 1st part.
+                          o rm['source_branch']     Source-branch name.
+                          o rm['task_start']        Timestamp the repo's task started (Python
+                                                    datetime object).
+                        The rm['task_start'] is of Python type datetime. strftime() can be used to
+                                                    generate a pretty-print timestamp.
+                        An example to be used in a  bash-script:
+                            parameters=" --merge-branch-template"
+                            parameters+=" merge/from_{rm['source_branch'].replace('origin/','')}"
+                            parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%%b%%d')}" 
+                            """))
     parser.add_argument('--local', default=False, action='store_true',
                         help=textwrap.dedent("""\
                         Skip the git pull command. Allows to merge a local-only source-branch that
