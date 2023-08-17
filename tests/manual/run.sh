@@ -16,9 +16,13 @@ parameters+=" --logs-dir $LOGS_DIR"
 parameters+=" --log-level DEBUG"
 parameters+=" --exec-pre-merge-script ../../pre-merge-script-examples/clone_repos_and_install_merge-drivers.sh"
 
-# Merge-branch template as f-String:
-parameters+=" --merge-branch-template maintain/dsm_{rm['source_branch'].replace('origin/','')}"
-parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%b%d')}"
+# Merge-branch template as f-String, using dict-notation:
+#parameters+=" --merge-branch-template maintain/dsm_{rm['source_branch'].replace('origin/','')}"
+#parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%b%d')}"
+
+# Merge-branch template as f-String, using dot-notation:
+parameters+=" --merge-branch-template maintain/dsm_{rm.source_branch.replace('origin/','')}"
+parameters+="_into_{rm.dest_branch}_{rm.task_start.strftime('%b%d')}"
 
 # Merge-branch template as Jinja2:
 #parameters+=" --merge-branch-pattern maintain/dsm_{{source_branch.replace(\"origin/\",\"\")}}"

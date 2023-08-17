@@ -12,6 +12,7 @@ import subprocess
 import sys
 import textwrap
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from typing import List
 
 LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -127,23 +128,24 @@ def init_argument_parser():
                         branch. If the merge-branch exists it will be deleted and re-created.
                         The template generating the name of the merge-branch understands the
                         following placeholders (rm means repo-metadata):
-                          o rm['dest_branch']       Dest-branch name.
-                          o rm['branch_branch']     From parameter -m/--merge-branch-template if given.
-                          o rm['prj_and_repo_remote_name']  From parameter -r/--repos-data, the 4th
-                                                    part.
-                          o rm['repos_dir']         From parameter -d/--repos-dir.
-                          o rm['repo_dir']          From parameter -d/--repos-dir, supplemented by
-                                                    the repo_local_name.
-                          o rm['repo_local_name']   From parameter -r/--repos-data, the 1st part.
-                          o rm['source_branch']     Source-branch name.
-                          o rm['task_start']        Timestamp the repo's task started (Python
-                                                    datetime object).
-                        The rm['task_start'] is of Python type datetime. strftime() can be used to
-                                                    generate a pretty-print timestamp.
-                        An example to be used in a  bash-script:
+                          o rm.dest_branch      Dest-branch name.
+                          o rm.branch_branch    From parameter -m/--merge-branch-template if given.
+                          o rm.prj_and_repo_remote_name     From parameter -r/--repos-data, the 4th
+                                                part.
+                          o rm.repos_dir        From parameter -d/--repos-dir.
+                          o rm.repo_dir         From parameter -d/--repos-dir, supplemented by the
+                                                repo_local_name.
+                          o rm.repo_local_name  From parameter -r/--repos-data, the 1st part.
+                          o rm.source_branch    Source-branch name.
+                          o rm.task_start       Timestamp the repo's task started (Python datetime
+                                                object).
+                        The rm.task_start is of Python type datetime. strftime() can be used to
+                        generate a pretty-print timestamp.
+                        An example to be used in a  bash-script, you must use single quotes
+                        within {}:
                             parameters=" --merge-branch-template"
-                            parameters+=" merge/from_{rm['source_branch'].replace('origin/','')}"
-                            parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%%b%%d')}" 
+                            parameters+=" merge/from_{rm.source_branch.replace('origin/','')}"
+                            parameters+="_into_{rm.dest_branch}_{rm.task_start.strftime('%%b%%d')}" 
                             """))
     parser.add_argument('--local', default=False, action='store_true',
                         help=textwrap.dedent("""\
@@ -324,8 +326,8 @@ def make_mergebranch_name(merge_branch_template, rm):
         parameters+=" --logs-dir $LOGS_DIR"
         parameters+=" --log-level DEBUG"
         parameters+=" --exec-pre-merge-script clone_repos_and_install_merge-drivers.sh"
-        parameters+=" --merge-branch-pattern maintain/dsm_{rm['source_branch'].replace('origin/','')}"
-        parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%b%d')}"
+        parameters+=" --merge-branch-pattern maintain/dsm_{rm.source_branch.replace('origin/','')}"
+        parameters+="_into_{rm.dest_branch}_{rm.task_start.strftime('%b%d')}"
         python3 ../../src/merge_git_repos.py $parameters
 
     Thanks to kadee: https://stackoverflow.com/questions/42497625/how-to-postpone-defer-the-evaluation-of-f-strings
@@ -336,6 +338,10 @@ def make_mergebranch_name(merge_branch_template, rm):
     """
 
     # The parameter "rm" seems to be not used, but it can be used in the merge-branch-template.
+    #
+    # The SimpleNamespace makes the dict "rm" an object allowing accessing the members with dot-notation. This is
+    # more convenient than the bracket-notation.
+    rm = SimpleNamespace(**rm)
     return eval(f'f"{merge_branch_template}"')
 
 
