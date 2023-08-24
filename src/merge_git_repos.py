@@ -161,23 +161,23 @@ def init_argument_parser():
                         Here you can clone the repos, install merge-drivers, and others.
                         This script runs in an environment with repo-specific environment variables
                         exposed:                        
-                        o MR_REPO_LOCAL_NAME    From parameter -r/--repos-data the 1st part
+                        o MGR_REPO_LOCAL_NAME   From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
-                        o MR_SOURCE_BRANCH      From parameter -r/--repos-data the 2nd part 
+                        o MGR_SOURCE_BRANCH     From parameter -r/--repos-data the 2nd part 
                                                 'source_branch', or the default-source-branch -S if
                                                 absent.
-                        o MR_DEST_BRANCH        From parameter -r/--repos-data the 3rd part 
+                        o MGR_DEST_BRANCH       From parameter -r/--repos-data the 3rd part 
                                                 'dest-branch', or the default-dest-branch -D if
                                                 absent.
-                        o MR_PRJ_AND_REPO_REMOTE_NAME   From parameter -r/--repos-data the 4th
+                        o MGR_PRJ_AND_REPO_REMOTE_NAME  From parameter -r/--repos-data the 4th
                                                 part 'prj/repo-remote-name'.
-                        o MR_REPO_DATA_FROM_PARAMETER   From parameter -r/--repos-data the
+                        o MGR_REPO_DATA_FROM_PARAMETER  From parameter -r/--repos-data the
                                                 complete string.
-                        o MR_TASK_START         The timestamp the repo's task has been started.
-                        o MR_MERGE_BRANCH       From parameter -m/--merge-branch-template if given,
+                        o MGR_TASK_START        The timestamp the repo's task has been started.
+                        o MGR_MERGE_BRANCH      From parameter -m/--merge-branch-template if given,
                                                 with placeholders replaced.
-                        o MR_REPOS_DIR          From parameter -d/--repos-dir. 
-                        o MR_REPO_DIR           From parameter -d, extended by a timestamp and the
+                        o MGR_REPOS_DIR         From parameter -d/--repos-dir. 
+                        o MGR_REPO_DIR          From parameter -d, extended by a timestamp and the
                                                 'repo_local_name' part of parameter -r/--repos-data. """))
 
     return parser
@@ -373,9 +373,9 @@ def execute_merge(repo_metadata):
         repo_displayname_for_logging = repo_local_name
         if g_cl_args.exec_pre_merge_script:
             env = os.environ.copy()
-            # Expose all members of repo_metadata as environment-vars, prefixed with "MR_".
+            # Expose all members of repo_metadata as environment-vars, prefixed with "MGR_".
             for key, value in repo_metadata.items():
-                env_var_name = f"MR_{key.upper()}"
+                env_var_name = f"MGR_{key.upper()}"
                 if isinstance(value, datetime):
                     value = value.isoformat()
                 env[env_var_name] = value
