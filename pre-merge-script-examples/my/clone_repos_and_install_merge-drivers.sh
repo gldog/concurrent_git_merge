@@ -5,7 +5,7 @@ set -x
 
 BASE_URL="https://bitbucket.org"
 
-echo "Env-vars exposed by merge_repos.py:"
+echo "Environment-vars exposed by merge_git_repos.py:"
 printenv | sort | grep MGR_
 
 # Clone the repo if absent and install the merge-drivers.
@@ -26,20 +26,23 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   # There might be Git-versions less than 2.11.4. Therefore the behaviour of --reference-if-able
   # is simulated.
   git_cmd="git -C $MGR_REPOS_DIR clone --branch $MGR_DEST_BRANCH ${BASE_URL}/${MGR_PRJ_AND_REPO_REMOTE_NAME}.git $MGR_REPO_LOCAL_NAME"
+  echo "Base Git-command for cloning: $git_cmd"
   if [[ -d "$REF_REPO" ]]; then
-    echo "Found reference-repo $REF_REPO, add Git-option --reference."
+    echo "Found reference-repo $REF_REPO, using option --reference."
     git_cmd+=" --reference $REF_REPO"
   else
-    echo "Haven't found reference-repo $REF_REPO, make a full clone (without option --reference)."
+    echo "Haven't found reference-repo $REF_REPO, making a full clone (without option --reference)."
   fi
+  echo "Resulting Git-command for cloning: $git_cmd"
   eval "$git_cmd"
 
-  echo "Install the XML Maven merge-driver."
+  echo "Installing the XML Maven merge-driver."
   git_cmd="git -C $MGR_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
   git_cmd+=" '"
   git_cmd+="keep_ours_paths_merge_driver.pyz -O %O -A %A -B %B -P ./%P"
   git_cmd+=" -p ./version ./parent/version ./properties/revision ./properties/:.+[.]version"
   git_cmd+="'"
+  echo "Git-command: $git_cmd"
   eval "$git_cmd"
 
   echo "Install the JSON NPM merge-driver."
@@ -52,11 +55,11 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
 
 else
   set +e
-  echo "Expected installed merge-drivers. The following command exits with a non-zero value in case no merge-driver is installed."
-  echo "Installed merge-drivers:"
-  git -C "$MGR_REPO_DIR" config --local --get-regexp merge-driver
+  echo "Installed merge-drivers (expecting 2):"
+  git_cmd="git -C $MR_REPO_DIR config --local --get-regexp merge-driver"
+  echo "Git-command: $git_cmd"
   if [[ $? != 0 ]]; then
-    echo "No merge-driver installed."
+    echo "Expected installed merge-drivers, but no merge-driver is installed."
     exit 1
   fi
 fi
