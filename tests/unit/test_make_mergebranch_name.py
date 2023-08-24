@@ -12,14 +12,15 @@ class Test03(unittest.TestCase):
             'source_branch': 'origin/SOURCE-BRANCH',
             'dest_branch': 'DEST-BRANCH'
         }
-        merge_branch_template = "merge/from_{rm['source_branch'].replace('origin/','')}" \
-                                "_into_{rm['dest_branch']}_{rm['task_start'].strftime('%b%d')}"
-        merge_branch = main.make_mergebranch_name(merge_branch_template, repo_metadata)
-        expected_merge_branch = 'merge/from_SOURCE-BRANCH_into_DEST-BRANCH_Jan01'
-        self.assertEqual(expected_merge_branch, merge_branch)
 
-        merge_branch_template = "merge/from_{rm['source_branch'].replace('origin/','')}" \
-                                "_into_{rm['dest_branch']}"
+        merge_branch_template = 'merge/from_{{source_branch.replace("origin/","")}}' \
+                                '_into_{{dest_branch}}'
         merge_branch = main.make_mergebranch_name(merge_branch_template, repo_metadata)
         expected_merge_branch = 'merge/from_SOURCE-BRANCH_into_DEST-BRANCH'
+        self.assertEqual(expected_merge_branch, merge_branch)
+
+        merge_branch_template = 'merge/from_{{source_branch.replace("origin/","")}}' \
+                                '_into_{{dest_branch}}_{{task_start.strftime(("%b%d"))}}'
+        merge_branch = main.make_mergebranch_name(merge_branch_template, repo_metadata)
+        expected_merge_branch = 'merge/from_SOURCE-BRANCH_into_DEST-BRANCH_Jan01'
         self.assertEqual(expected_merge_branch, merge_branch)

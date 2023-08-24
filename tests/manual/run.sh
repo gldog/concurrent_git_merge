@@ -21,12 +21,12 @@ parameters+=" --exec-pre-merge-script ../../pre-merge-script-examples/clone_repo
 #parameters+="_into_{rm['dest_branch']}_{rm['task_start'].strftime('%b%d')}"
 
 # Merge-branch template as f-String, using dot-notation:
-parameters+=" --merge-branch-template maintain/dsm_{rm.source_branch.replace('origin/','')}"
-parameters+="_into_{rm.dest_branch}_{rm.task_start.strftime('%b%d')}"
+#parameters+=" --merge-branch-template maintain/dsm_{rm.source_branch.replace('origin/','')}"
+#parameters+="_into_{rm.dest_branch}_{rm.task_start.strftime('%b%d')}"
 
 # Merge-branch template as Jinja2:
-#parameters+=" --merge-branch-pattern maintain/dsm_{{source_branch.replace(\"origin/\",\"\")}}"
-#parameters+="_into_{{dest_branch}}_{{task_start.strftime(\"%b%d\")}}"
+parameters+=" --merge-branch-template maintain/dsm_{{source_branch.replace('origin','')}}"
+parameters+="_into_{{dest_branch}}_{{task_start.strftime('%b%d')}}"
 
 #parameters+=" --local"
 
