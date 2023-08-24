@@ -14,7 +14,7 @@ parameters+=" td:origin/master:test-feature-branch:jheger/stash-tagdetails"
 parameters+=" --repos-dir $REPOS_DIR"
 parameters+=" --logs-dir $LOGS_DIR"
 parameters+=" --log-level DEBUG"
-parameters+=" --exec-pre-merge-script ../../pre-merge-script-examples/clone_repos_and_install_merge-drivers.sh"
+parameters+=" --exec-pre-merge-script ../../pre-merge-script-examples/my/clone_repos_and_install_merge-drivers.sh"
 
 # Merge-branch template as f-String, using dict-notation:
 #parameters+=" --merge-branch-template maintain/dsm_{rm['source_branch'].replace('origin/','')}"
