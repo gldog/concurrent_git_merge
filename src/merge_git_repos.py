@@ -365,6 +365,7 @@ def execute_merge(repo_metadata):
              f"{json.dumps(repo_metadata, indent=2, default=serialize_datetime_or_propagate)}\n")
 
     task_finish_status = "successfully"
+    repo_metadata['task_finish_details'] = ''
     # try: run_command() might raise an exception.
     try:
         repo_displayname_for_logging = repo_local_name
@@ -415,12 +416,14 @@ def execute_merge(repo_metadata):
 
     except Exception as e:
         task_finish_status = "with error"
+        repo_metadata['task_finish_details'] = str(e)
         return str(e)
     finally:
         task_end_timestamp = datetime.now()
         repo_metadata['task_end'] = task_end_timestamp
         task_duration = task_end_timestamp - task_start_timestamp
         repo_metadata['task_duration'] = str(task_duration)
+        repo_metadata['task_finish_status'] = task_finish_status
         log_msg = f"Finished merge-task for '{repo_local_name}' {task_finish_status}."
         g_logger.info(log_msg)
         log_task(logfile_name, f"{log_msg}\n")
@@ -443,6 +446,39 @@ def get_formatted_timediff_mmss(time_diff: timedelta) -> str:
     formatted_diff = f'{minutes:02.0f}:{seconds:05.2f}'
 
     return formatted_diff
+
+
+def make_report_xml_content(repos_metadata):
+    EMPTY_CELL_DEFAULT = '&nbsp;'
+    lines = []
+    line = []
+
+    lines.append('<table>')
+    line.append('<tr>')
+    line.append('<td>repo_local_name</td>')
+    line.append('<td>task_finish_status</td>')
+    line.append('<td>source_branch</td>')
+    line.append('<td>dest_branch</td>')
+    line.append('<td>task_duration</td>')
+    line.append('<td>task_finish_details</td>')
+    line.append('</tr>')
+    lines.append(''.join(line))
+
+    for repo_metadata in repos_metadata:
+        line.clear()
+        line.append('<tr>')
+        line.append(f'<td>{dict.get(repo_metadata, "repo_local_name", EMPTY_CELL_DEFAULT)}</td>')
+        line.append(f'<td>{dict.get(repo_metadata, "task_finish_status", EMPTY_CELL_DEFAULT)}</td>')
+        line.append(f'<td>{dict.get(repo_metadata, "source_branch", EMPTY_CELL_DEFAULT)}</td>')
+        line.append(f'<td>{dict.get(repo_metadata, "dest_branch", EMPTY_CELL_DEFAULT)}</td>')
+        line.append(f'<td>{dict.get(repo_metadata, "task_duration", EMPTY_CELL_DEFAULT)}</td>')
+        line.append(f'<td>{dict.get(repo_metadata, "task_finish_details", EMPTY_CELL_DEFAULT)}</td>')
+        line.append('</tr>')
+        lines.append(''.join(line))
+
+    lines.append('</table>')
+
+    return '\n'.join(lines)
 
 
 def exit_handler():
@@ -477,6 +513,11 @@ def main():
 
     # with multiprocessing.Pool() as pool:
     #    errors = list(pool.map(execute_merge, repos_metadata))
+
+    # Write HTML-report
+    report_html_file = pathlib.Path(g_cl_args.logs_dir, 'report.xml')
+    with open(report_html_file, 'w') as f:
+        f.write(make_report_xml_content(repos_metadata))
 
     g_logger.debug(f"repos_metadata: {json.dumps(repos_metadata, default=serialize_datetime_or_propagate)}")
     # The list "errors" contains one entry per thread. An entry is either an error-message or None. Remove all
