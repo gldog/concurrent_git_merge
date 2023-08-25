@@ -3,8 +3,9 @@
     $ python src/merge_git_repos.py -h
     usage: merge_git_repos.py [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
                               [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
-                              LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_BRANCH_TEMPLATE]
-                              [--local] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-e EXEC_PRE_MERGE_SCRIPT]
+                              LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
+                              [-t MERGE_BRANCH_TEMPLATE] [--local] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+                              [-e EXEC_PRE_MERGE_SCRIPT]
     
     This script do merges in a list of repos. For each repo, a source-branch and a dest-branch must be
     given. Source- and dest-branches can be given individually for each repo, and as defaults to be
@@ -67,8 +68,8 @@
                                 must be given.
                                     -r p1-m1:::products/product1-module1 \
                                        p1-m2:::products/product1-module2 \
-                                       -S origin/master -D my-feature \
-                                       -e clone_if_absent_and_install_merge-drivers.sh
+                                    -S origin/master  -D my-feature \
+                                    -e clone_if_absent_and_install_merge-drivers.sh
       -d REPOS_DIR, --repos-dir REPOS_DIR
                             Directory the repos resides.
       -o LOGS_DIR, --logs-dir LOGS_DIR
@@ -77,7 +78,11 @@
                             Default source branch used for repos without given source-branch.
       -D DEFAULT_DEST_BRANCH, --default-dest-branch DEFAULT_DEST_BRANCH
                             Default destination branch used for repos without given dest-branch.
-      -m MERGE_BRANCH_TEMPLATE, --merge-branch-template MERGE_BRANCH_TEMPLATE
+      -m MERGE_OPTIONS, --merge-options MERGE_OPTIONS
+                            Options for git merge command. Must be given as one string, e.g.:
+                              --merge-options '--no-ff -Xrenormalize -Xignore-space-at-eol'
+                            The option --no-edit is always set internally.
+      -t MERGE_BRANCH_TEMPLATE, --merge-branch-template MERGE_BRANCH_TEMPLATE
                             Create a merge-branch based on the dest-branch and do the merge in this
                             branch. If the merge-branch exists it will be deleted and re-created.
                             The template generating the name of the merge-branch is a jinja2-template

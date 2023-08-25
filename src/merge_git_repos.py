@@ -110,8 +110,8 @@ def init_argument_parser():
                             must be given.
                                 -r p1-m1:::products/product1-module1 \\
                                    p1-m2:::products/product1-module2 \\
-                                   -S origin/master -D my-feature \\
-                                   -e clone_if_absent_and_install_merge-drivers.sh"""))
+                                -S origin/master  -D my-feature \\
+                                -e clone_if_absent_and_install_merge-drivers.sh"""))
     parser.add_argument('-d', '--repos-dir', required=True,
                         help="Directory the repos resides.")
     parser.add_argument('-o', '--logs-dir', required=True,
@@ -120,7 +120,12 @@ def init_argument_parser():
                         help="Default source branch used for repos without given source-branch.")
     parser.add_argument('-D', '--default-dest-branch', default='',
                         help="Default destination branch used for repos without given dest-branch.")
-    parser.add_argument('-m', '--merge-branch-template',
+    parser.add_argument('-m', '--merge-options', default='',
+                        help=textwrap.dedent("""\
+                        Options for git merge command. Must be given as one string, e.g.:
+                          --merge-options '--no-ff -Xrenormalize -Xignore-space-at-eol'
+                        The option --no-edit is always set internally."""))
+    parser.add_argument('-t', '--merge-branch-template',
                         help=textwrap.dedent("""\
                         Create a merge-branch based on the dest-branch and do the merge in this
                         branch. If the merge-branch exists it will be deleted and re-created.
@@ -316,20 +321,8 @@ def make_mergebranch_name(merge_branch_template, repo_metadata):
 
     Example:
 
-    The following bash-script composes the command line for merge_git_repos.py. The last two "parameters+=" lines
-    defines the template for the merge-branch.
-
-        #!/bin/bash
-        parameters=" --repos-data"
-        parameters+=" mb:origin/master:test-feature-branch:prj/repo1"
-        parameters+=" td:origin/master:test-feature-branch:prj/repo2"
-        parameters+=" --repos-dir $REPOS_DIR"
-        parameters+=" --logs-dir $LOGS_DIR"
-        parameters+=" --log-level DEBUG"
-        parameters+=" --exec-pre-merge-script clone_repos_and_install_merge-drivers.sh"
-        parameters+=" --merge-branch-template maintain/dsm_{{source_branch.replace('origin/','')}}"
-        parameters+="_into_{{dest_branch}}_{{task_start.strftime('%b%d')}}"
-        python3 ../../src/merge_git_repos.py $parameters
+    --merge-branch-template \
+      "maintain/{{source_branch.replace('origin/','')}}_into_{{dest_branch}}_{{task_start.strftime('%b%d')}}"
 
     :param merge_branch_template: jinja2-template.
     :param repo_metadata: repo_metadata dict.
@@ -411,7 +404,7 @@ def execute_merge(repo_metadata):
             commands.append(f'git -C {repo_dir} checkout -b {repo_metadata["merge_branch"]}')
 
         commands.append(
-            f'git -C {repo_dir} merge --no-ff --no-edit -Xrenormalize -Xignore-space-at-eol {source_branch}')
+            f'git -C {repo_dir} merge --no-edit {g_cl_args.merge_options} {source_branch}')
         run_commands(commands, f' -C {repo_dir}', repo_displayname_for_logging, logfile_name)
 
     except Exception as e:
