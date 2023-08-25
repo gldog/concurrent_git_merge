@@ -79,7 +79,7 @@ def init_argument_parser():
                             4. 'prj/repo_remote_name', optional
                                 The remote project- and repo-name. Exposed as environment variable
                                 to the script given in -e/--exec-pre-merge-script.
-                                The 'prj'-part is the Bitbucket-project or the Github-username or 
+                                The 'prj'-part is the Bitbucket-project or the Github-username or
                                 the Gitlab-namespace.
                         The full notation is:
                                 -r repo_local_name:source_branch:dest_branch:prj/repo_remote_name
@@ -87,7 +87,7 @@ def init_argument_parser():
                                 -r repo_local_name:::
                         Delimiters of empty parts can be omitted from right to left.
                         The above parameter can be given as:
-                                -r repo_local_name 
+                                -r repo_local_name
                         The repos given in this parameter should exist in -d/--repos-dir. This
                         script does not clone missing repos. If a repo is missing, its merge-task
                         will be aborted and an error-message will be printed, but the script will
@@ -128,7 +128,7 @@ def init_argument_parser():
                         and understands the following placeholders:
                           o repo_local_name     From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
-                          o source_branch       From parameter -r/--repos-data the 2nd part 
+                          o source_branch       From parameter -r/--repos-data the 2nd part
                                                 'source_branch', or the default-source-branch -S if
                                                 absent.
                           o dest_branch         From parameter -r/--repos-data the 3rd part
@@ -144,7 +144,7 @@ def init_argument_parser():
                         An example to be used in a  bash-script:
                             parameters=" --merge-branch-template"
                             parameters+=" merge/from_{{source_branch.replace('origin/','')}}"
-                            parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%b%%d')}}" 
+                            parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%b%%d')}}"
                             """))
     parser.add_argument('--local', default=False, action='store_true',
                         help=textwrap.dedent("""\
@@ -157,13 +157,13 @@ def init_argument_parser():
                         This script is executed in each repo's merge-task, means it runs parallel.
                         Here you can clone the repos, install merge-drivers, and others.
                         This script runs in an environment with repo-specific environment variables
-                        exposed:                        
+                        exposed:
                         o MGR_REPO_LOCAL_NAME   From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
-                        o MGR_SOURCE_BRANCH     From parameter -r/--repos-data the 2nd part 
+                        o MGR_SOURCE_BRANCH     From parameter -r/--repos-data the 2nd part
                                                 'source_branch', or the default-source-branch -S if
                                                 absent.
-                        o MGR_DEST_BRANCH       From parameter -r/--repos-data the 3rd part 
+                        o MGR_DEST_BRANCH       From parameter -r/--repos-data the 3rd part
                                                 'dest-branch', or the default-dest-branch -D if
                                                 absent.
                         o MGR_PRJ_AND_REPO_REMOTE_NAME  From parameter -r/--repos-data the 4th
@@ -173,7 +173,7 @@ def init_argument_parser():
                         o MGR_TASK_START        The timestamp the repo's task has been started.
                         o MGR_MERGE_BRANCH      From parameter -m/--merge-branch-template if given,
                                                 with placeholders replaced.
-                        o MGR_REPOS_DIR         From parameter -d/--repos-dir. 
+                        o MGR_REPOS_DIR         From parameter -d/--repos-dir.
                         o MGR_REPO_DIR          From parameter -d, extended by a timestamp and the
                                                 'repo_local_name' part of parameter -r/--repos-data. """))
 
