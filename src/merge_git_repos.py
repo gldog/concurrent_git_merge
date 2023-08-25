@@ -21,7 +21,6 @@ DEFAULT_LOGLEVEL = 'INFO'
 SCRIPT_NAME = os.path.splitext(os.path.basename(__file__))[0]
 
 g_script_start = datetime.now()
-g_logsdir_with_timestamped_subdir = ''
 g_logger = logging.getLogger()
 
 
@@ -116,9 +115,7 @@ def init_argument_parser():
     parser.add_argument('-d', '--repos-dir', required=True,
                         help="Directory the repos resides.")
     parser.add_argument('-o', '--logs-dir', required=True,
-                        help=textwrap.dedent("""\
-                        Log-directory. Each run of this script creates a subdirectory with a
-                        timestamp."""))
+                        help="Logs-directory.")
     parser.add_argument('-S', '--default-source-branch', default='',
                         help="Default source branch used for repos without given source-branch.")
     parser.add_argument('-D', '--default-dest-branch', default='',
@@ -284,7 +281,7 @@ def serialize_datetime_or_propagate(obj):
 
 
 def log_task(logfile_name: str, logfile_content: str):
-    logfile_path = pathlib.Path(g_logsdir_with_timestamped_subdir, logfile_name)
+    logfile_path = pathlib.Path(g_cl_args.logs_dir, logfile_name)
     with open(logfile_path, 'a', newline='') as f:
         f.write(logfile_content)
 
@@ -459,14 +456,9 @@ def main():
     global g_cl_args
     g_cl_args = cl_parser.parse_args()
 
-    # The g_logsdir_with_timestamped_subdir can't be set at the beginning of the script because it contains data
-    # from the arg-parser.
-    global g_logsdir_with_timestamped_subdir
-    start_timestamp_formatted_str = g_script_start.strftime('%Y%m%d-%H%M%S')
-    g_logsdir_with_timestamped_subdir = pathlib.Path(g_cl_args.logs_dir, start_timestamp_formatted_str)
-    os.makedirs(g_logsdir_with_timestamped_subdir, exist_ok=True)
+    os.makedirs(g_cl_args.logs_dir, exist_ok=True)
 
-    configure_logger(g_cl_args.log_level, g_logsdir_with_timestamped_subdir)
+    configure_logger(g_cl_args.log_level, g_cl_args.logs_dir)
 
     g_logger.debug(f"args: {g_cl_args}")
 

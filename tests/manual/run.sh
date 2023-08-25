@@ -5,7 +5,7 @@
 # https://bitbucket.org/jheger
 
 REPOS_DIR="/Users/jo/prj-test/merge_git_repos/repos"
-LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs"
+LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs/$(date +'%Y%m%d-%H%M%S')"
 rm -rf "$REPOS_DIR"
 
 parameters=" --repos-data"
