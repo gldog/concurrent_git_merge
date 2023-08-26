@@ -5,6 +5,12 @@ set -x
 
 BASE_URL="https://bitbucket.org"
 
+# If merge_git_repos.py is called in Git-Bash, Python thinks it runs in a Windows environment and creates Windows-style
+# paths. Make the paths Unix-style-paths.
+export MGR_REPO_DIR="${MGR_REPO_DIR//\\//}"
+export MGR_REPOS_DIR="${MGR_REPOS_DIR//\\//}"
+export MGR_LOGS_DIR="${MGR_LOGS_DIR//\\//}"
+
 echo "Environment-vars exposed by merge_git_repos.py:"
 printenv | sort | grep MGR_
 
