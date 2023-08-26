@@ -291,9 +291,8 @@ def log_task(logfile_name: str, logfile_content: str):
         f.write(logfile_content)
 
 
-def run_command(command, command_pretty_print_for_log, repo_displayname_for_log, logfile_name, honor_returncode=True,
-                env=None):
-    g_logger.info(f"{repo_displayname_for_log}: $ {command_pretty_print_for_log}")
+def run_command(command, repo_name, logfile_name, honor_returncode=True, env=None):
+    g_logger.info(f"{repo_name}: $ {command}")
     log_task(logfile_name, f"$ {command}\n")
     timestamp_begin = datetime.now()
     r = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, env=env)
@@ -303,16 +302,10 @@ def run_command(command, command_pretty_print_for_log, repo_displayname_for_log,
              f"Duration: {timestamp_end - timestamp_begin}; " +
              f"Output:\n{r.stdout.decode()}\n")
     if honor_returncode and r.returncode != 0:
-        error_msg = f"{repo_displayname_for_log}: The following command exited with exit-code {r.returncode}:\n" \
+        error_msg = f"{repo_name}: The following command exited with exit-code {r.returncode}:\n" \
                     f"{command}\n{r.stdout.decode()}"
         raise Exception(error_msg)
     return r
-
-
-def run_commands(commands: List[str], remove_str, repo_displayname_for_logging, logfile_name):
-    for command in commands:
-        command_pretty_print_for_log = command.replace(remove_str, '')
-        run_command(command, command_pretty_print_for_log, repo_displayname_for_logging, logfile_name)
 
 
 def make_mergebranch_name(merge_branch_template, repo_metadata):
@@ -361,7 +354,6 @@ def execute_merge(repo_metadata):
     repo_metadata['task_finish_details'] = ''
     # try: run_command() might raise an exception.
     try:
-        repo_displayname_for_logging = repo_local_name
         if g_cl_args.exec_pre_merge_script:
             env = os.environ.copy()
             # Expose all members of repo_metadata as environment-vars, prefixed with "MGR_".
@@ -371,7 +363,7 @@ def execute_merge(repo_metadata):
                     value = value.isoformat()
                 env[env_var_name] = value
             command = g_cl_args.exec_pre_merge_script
-            run_command(command, command, repo_displayname_for_logging, logfile_name, env=env)
+            run_command(command, repo_local_name, logfile_name, env=env)
 
         # The repo is expected to be present.
         if not pathlib.Path(repo_dir, '.git').is_dir():
@@ -380,32 +372,28 @@ def execute_merge(repo_metadata):
                 f"-r/--repos-data {repo_metadata['repo_data_from_parameter']}, " +
                 f"but it is missing in parameter -d/--repos-dir {g_cl_args.repos_dir}.")
 
-        commands = [
-            f'git -C {repo_dir} reset --hard',
-            f'git -C {repo_dir} clean -fd',
-            f'git -C {repo_dir} checkout {dest_branch}'
-        ]
-        if not g_cl_args.local:
-            commands.append(f'git -C {repo_dir} pull --ff')
+        run_command(f'git -C {repo_dir} reset --hard', repo_local_name, logfile_name)
+        run_command(f'git -C {repo_dir} clean -fd', repo_local_name, logfile_name)
+        run_command(f'git -C {repo_dir} checkout {dest_branch}', repo_local_name, logfile_name)
 
-        run_commands(commands, f' -C {repo_dir}', repo_displayname_for_logging, logfile_name)
-        commands.clear()
+        if not g_cl_args.local:
+            run_command(f'git -C {repo_dir} pull --ff', repo_local_name, logfile_name)
 
         if g_cl_args.merge_branch_template:
             # Delete the merge-branch if it exists.
-            command = f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}'
-            command_pretty_print_for_log = command.replace(f' -C {repo_dir}', '')
-            r = run_command(command, command_pretty_print_for_log, repo_displayname_for_logging, logfile_name,
-                            honor_returncode=False)
+            r = run_command(f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}',
+                            repo_local_name, logfile_name, honor_returncode=False)
             if r.returncode == 0:
-                commands.append(f'git -C {repo_dir} branch -D {repo_metadata["merge_branch"]}')
+                run_command(f'git -C {repo_dir} branch -D {repo_metadata["merge_branch"]}', repo_local_name,
+                            logfile_name)
             else:
                 log_task(logfile_name, "  (Merge-branch not present)\n\n")
-            commands.append(f'git -C {repo_dir} checkout -b {repo_metadata["merge_branch"]}')
+                run_command(f'git -C {repo_dir} checkout -b {repo_metadata["merge_branch"]}', repo_local_name,
+                            logfile_name)
 
-        commands.append(
-            f'git -C {repo_dir} merge --no-edit {g_cl_args.merge_options} {source_branch}')
-        run_commands(commands, f' -C {repo_dir}', repo_displayname_for_logging, logfile_name)
+        run_command(f'git -C {repo_dir} merge --no-edit {g_cl_args.merge_options} {source_branch}', repo_local_name,
+                    logfile_name)
+
 
     except Exception as e:
         task_finish_status = "with error"
