@@ -189,9 +189,10 @@ def init_argument_parser():
                           o MGR_TASK_START      The timestamp the repo's task has been started.
                           o MGR_MERGE_BRANCH    From parameter -m/--merge-branch-template if given,
                                                 with placeholders replaced.
-                          o MGR_REPOS_DIR       From parameter -d/--repos-dir.
                           o MGR_REPO_DIR        From parameter -d, extended by a timestamp and the
                                                 'repo_local_name' part of parameter -r/--repos-data.
+                          o MGR_REPOS_DIR       From parameter -d/--repos-dir.
+                          o MGR_LOGS_DIR        From parameter -o/--logs-dir.
                         For cloning you'll use MGR_REPOS_DIR, and for commands inside a repo you'll
                         use MGR_REPO_DIR."""))
     parser.add_argument('--post-script',
@@ -357,7 +358,9 @@ def execute_merge(repo_metadata):
     repo_metadata['task_start'] = task_start_timestamp
     # Need str() here to avoid "TypeError: Object of type PosixPath is not JSON serializable".
     repo_metadata['repo_dir'] = str(pathlib.Path(g_cl_args.repos_dir, repo_local_name))
+    # Add some global data.
     repo_metadata['repos_dir'] = g_cl_args.repos_dir
+    repo_metadata['logs_dir'] = g_cl_args.logs_dir
 
     if g_cl_args.merge_branch_template:
         repo_metadata['merge_branch'] = make_mergebranch_name(g_cl_args.merge_branch_template, repo_metadata)
