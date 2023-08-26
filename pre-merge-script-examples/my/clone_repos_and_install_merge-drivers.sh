@@ -62,7 +62,7 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
 else
   set +e
   echo "Installed merge-drivers (expecting 2):"
-  git_cmd="git -C $MR_REPO_DIR config --local --get-regexp merge-driver"
+  git_cmd="git -C $MGR_REPO_DIR config --local --get-regexp merge-driver"
   echo "Git-command: $git_cmd"
   if [[ $? != 0 ]]; then
     echo "Expected installed merge-drivers, but no merge-driver is installed."
