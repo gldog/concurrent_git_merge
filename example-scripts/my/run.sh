@@ -1,7 +1,8 @@
 #!/bin/bash
 
 REPOS_DIR="/Users/jo/prj-test/merge_git_repos/repos"
-LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs/$(date +'%Y%m%d-%H%M%S')"
+DATE_STRING="$(date +'%Y%m%d-%H%M%S')"
+LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs/$DATE_STRING"
 
 rm -rf "$REPOS_DIR"
 
@@ -17,8 +18,8 @@ python3 ../../src/merge_git_repos.py \
   --pre-script 'bash -c ../../example-scripts/my/pre/clone_repos_and_install_merge-drivers.sh' \
   --post-script 'bash -c "echo 'FINISHED' ; printenv | grep MGR_ ; git -C $MGR_REPO_DIR status"' \
   --merge-branch-template \
-  "maintain/dsm_{{source_branch.replace('origin/','')}}_into_{{dest_branch}}_{{task_start.strftime('%b%d')}}"
+    "maintain/{{source_branch.replace('origin/','')}}_into_{{dest_branch}}_$DATE_STRING"
 
-# --post-script 'echo "FINISHED" ; printenv | grep MGR_ ; git -C $MGR_REPO_DIR status' \
+# --post-script 'bash -c "git push --set-upstream origin HEAD"' \
 
 echo "Exit code: $?"

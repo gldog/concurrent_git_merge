@@ -161,7 +161,14 @@ def init_argument_parser():
                         generate a pretty-print timestamp. An example to be used in a bash-script:
                             parameters=" --merge-branch-template
                             parameters+=" merge/from_{{source_branch.replace('origin/','')}}"
-                            parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%b%%d')}}" """))
+                            parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%Y%%m%%d-%%H%%M%%S')}}"
+                        The task's timestamps are very close to the one the script was started. But you might
+                        prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
+                            DATE_STR="$(date +'%%Y%%m%%d-%%H%%M%%S')"
+                            merge_git_repos.py \\
+                              --merge-branch-template "merge/...$DATE_STR" \\
+                              --logs-dir "./logs/$DATE_STRING" \\
+                              ... """))
     parser.add_argument('--local', default=False, action='store_true',
                         help=textwrap.dedent("""\
                         Skip the git pull command. Allows to merge a local-only source-branch that
@@ -201,8 +208,11 @@ def init_argument_parser():
                         help=textwrap.dedent("""\
                         This script is executed at the end of each repo's merge-task. Here you can
                         push the result, create pull-requests, and others. This script doesn't run
-                        in the repo's directory. This script runs in an environment with
-                        repo-specific environment variables exposed as described in --pre-script."""))
+                        in the repo's directory (use '-C' instead). This script runs in an
+                        environment with repo-specific environment variables exposed as described
+                        in --pre-script.
+                        A most simple post-script parameter could be:
+                            --post-script 'bash -c "git push --set-upstream origin HEAD"' """))
 
     return parser
 
