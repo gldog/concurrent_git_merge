@@ -138,6 +138,10 @@ def init_argument_parser():
                         help=textwrap.dedent("""\
                         Create a merge-branch based on the dest-branch and do the merge in this
                         branch. If the merge-branch exists it will be deleted and re-created.
+                        A merge-branch typically is used in case you wan't to create a pull-request
+                        from the merge-result to an upstream-branch. Either because you want QA
+                        on the PR, or you have no permission to merge into the target-branch
+                        directly.
                         The template generating the name of the merge-branch is a jinja2-template
                         and understands the following placeholders:
                           o repo_local_name     From parameter -r/--repos-data the 1st part
@@ -153,13 +157,11 @@ def init_argument_parser():
                           o repo_data_from_parameter    From parameter -r/--repos-data the
                                                 complete string.
                           o task_start          The timestamp the repo's task has been started.
-                        The task_start is of Pythontype 'datetime'. strftime() can be used to
-                        generate a pretty-print timestamp.
-                        An example to be used in a  bash-script:
-                            parameters=" --merge-branch-template"
+                        The task_start is of Python-type 'datetime'. strftime() can be used to
+                        generate a pretty-print timestamp. An example to be used in a bash-script:
+                            parameters=" --merge-branch-template
                             parameters+=" merge/from_{{source_branch.replace('origin/','')}}"
-                            parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%b%%d')}}"
-                            """))
+                            parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%b%%d')}}" """))
     parser.add_argument('--local', default=False, action='store_true',
                         help=textwrap.dedent("""\
                         Skip the git pull command. Allows to merge a local-only source-branch that
