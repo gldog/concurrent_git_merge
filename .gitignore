@@ -7,7 +7,7 @@ keep_ours_paths_merge_driver.pyz
 
 other
 eval
-pre-merge-script-examples/others
+example-scripts/others
 
 # Node artifact files
 node_modules/
