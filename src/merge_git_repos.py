@@ -16,6 +16,8 @@ from typing import List
 
 from jinja2 import Environment
 
+__version__ = '1.0.0-dev'
+
 LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 DEFAULT_LOGLEVEL = 'INFO'
 SCRIPT_NAME = os.path.splitext(os.path.basename(__file__))[0]

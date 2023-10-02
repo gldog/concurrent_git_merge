@@ -5,9 +5,15 @@
 
 keep_ours_paths_merge_driver.pyz
 
-other
+# Me
 eval
 example-scripts/others
+merge_git_repos.pyz
+todo.md
+
+# Shiv
+build
+src.egg-info
 
 # Node artifact files
 node_modules/
