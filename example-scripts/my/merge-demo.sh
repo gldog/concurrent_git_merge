@@ -15,7 +15,7 @@ export MERGE_DRIVER_EXECUTABLE="keep_ours_paths_merge_driver.pyz"
 # Make Git (called by merge_git_repos.py) and the pre-script find the merge driver.
 # Setting the PATH in the pre-script is not sufficient, as Git must find it, and Git is called by
 # merge_git_repos.py
-export PATH=$(pwd)/merge-driver-executable:$PATH
+export PATH=$(pwd):$PATH
 
 if ! which "$MERGE_DRIVER_EXECUTABLE"; then
   echo "Can't execute $MERGE_DRIVER_EXECUTABLE. Is it on PATH?"
@@ -32,7 +32,7 @@ python3 ../../src/merge_git_repos.py \
   --repos-dir $REPOS_DIR \
   --logs-dir $LOGS_DIR \
   --log-level DEBUG \
-  --pre-script 'bash -c ../../example-scripts/my/pre/clone_repos_and_install_merge-drivers.sh' \
+  --pre-script 'bash -c ./clone_repos_and_install_mergedrivers.sh' \
   --post-script 'bash -c "echo 'FINISHED' ; printenv | grep MGR_ ; git -C $MGR_REPO_DIR status"' \
   --merge-branch-template \
   "maintain/{{source_branch.replace('origin/','')}}_into_{{dest_branch}}_$DATE_STRING"
