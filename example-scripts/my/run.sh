@@ -6,6 +6,14 @@ LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs/$DATE_STRING"
 
 COMMON_DEST_BRANCH="ours-branch"
 
+export PATH=$(pwd)/merge-driver-binary:$PATH
+export MERGE_DRIVER_BINARY="keep_ours_paths_merge_driver.pyz"
+
+if ! which $MERGE_DRIVER_BINARY; then
+  echo "Can't execute $MERGE_DRIVER_BINARY. Is it on PATH?"
+  exit 1
+fi
+
 rm -rf "$REPOS_DIR"
 
 #The "bash -c" is needed in Git-Bash, and can be omitted otherwise.
