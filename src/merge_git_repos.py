@@ -325,19 +325,19 @@ def log_task(logfile_name: str, logfile_content: str):
         f.write(logfile_content)
 
 
-def run_command(command, repo_name, logfile_name, honor_returncode=True, env=None):
+def run_command(command, repo_name, logfile_name, honor_returncode=True, suppress_stdout=False, env=None):
     g_logger.info(f"{repo_name}: $ {command}")
     log_task(logfile_name, f"$ {command}\n")
     timestamp_begin = datetime.now()
-    r = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, env=env)
+    r = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, text=True, env=env)
     timestamp_end = datetime.now()
-    log_task(logfile_name,
-             f"Returncode: {r.returncode}; " +
-             f"Duration: {timestamp_end - timestamp_begin}; " +
-             f"Output:\n{r.stdout.decode()}\n")
+    output = f"Returncode: {r.returncode}; Duration: {timestamp_end - timestamp_begin}"
+    if not suppress_stdout:
+        output += f"; Output:\n{r.stdout}"
+    log_task(logfile_name, f"{output}\n")
     if honor_returncode and r.returncode != 0:
         error_msg = f"{repo_name}: The following command exited with exit-code {r.returncode}:\n" \
-                    f"{command}\n{r.stdout.decode()}"
+                    f"{command}\n{r.stdout}"
         raise Exception(error_msg)
     return r
 
@@ -420,9 +420,12 @@ def execute_merge(repo_metadata):
 
         if g_cl_args.merge_branch_template:
             # Delete the merge-branch if it exists.
+            # suppress_stdout=True:
+            # The command returns an empty line. This looks a bit confusing in the logfile.
             r = run_command(f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}',
-                            repo_local_name, logfile_name, honor_returncode=False)
+                            repo_local_name, logfile_name, honor_returncode=False, suppress_stdout=True)
             if r.returncode == 0:
+                # The merge-branch exists, delete it.
                 run_command(f'git -C {repo_dir} branch -D {repo_metadata["merge_branch"]}', repo_local_name,
                             logfile_name)
             else:
