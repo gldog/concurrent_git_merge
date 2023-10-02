@@ -66,7 +66,7 @@ def init_argument_parser():
             git reset --hard
             git clean -fd
             git checkout {dest_branch}
-            git pull --ff, if --local is not given
+            git pull --ff, if --no-pull is not given
             create merge-branch and checkout, if --merge-branch-template is given
             git merge --no-edit {merge_options} {source_branch}
             post_script, if given in --post-script"""))
@@ -169,7 +169,7 @@ def init_argument_parser():
                               --merge-branch-template "merge/...$DATE_STR" \\
                               --logs-dir "./logs/$DATE_STRING" \\
                               ... """))
-    parser.add_argument('--local', default=False, action='store_true',
+    parser.add_argument('--no-pull', default=False, action='store_true',
                         help=textwrap.dedent("""\
                         Skip the git pull command. Allows to merge a local-only source-branch that
                         has no tracking remote-branch."""))
@@ -413,7 +413,7 @@ def execute_merge(repo_metadata):
         run_command(f'git -C {repo_dir} clean -fd', repo_local_name, logfile_name)
         run_command(f'git -C {repo_dir} checkout {dest_branch}', repo_local_name, logfile_name)
 
-        if not g_cl_args.local:
+        if not g_cl_args.no_pull:
             run_command(f'git -C {repo_dir} pull --ff', repo_local_name, logfile_name)
 
         if g_cl_args.merge_branch_template:
@@ -438,7 +438,7 @@ def execute_merge(repo_metadata):
             log_task(logfile_name, ">>>>> POST-SCRIPT END\n")
 
     except Exception as e:
-        task_finish_status = "with error"
+        task_finish_status = "with FAILURE"
         repo_metadata['task_finish_details'] = str(e)
         return str(e)
     finally:
@@ -451,7 +451,7 @@ def execute_merge(repo_metadata):
         if task_finish_status == "successfully":
             g_logger.info(log_msg)
         else:
-            g_logger.warn(log_msg)
+            g_logger.warning(log_msg)
         log_task(logfile_name, f"{log_msg}\n")
         log_task(logfile_name, "repo_metadata at task-end:\n" +
                  f"{json.dumps(repo_metadata, indent=2, default=serialize_datetime_or_propagate)}\n")
