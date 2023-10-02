@@ -11,6 +11,8 @@ export MGR_REPO_DIR="${MGR_REPO_DIR//\\//}"
 export MGR_REPOS_DIR="${MGR_REPOS_DIR//\\//}"
 export MGR_LOGS_DIR="${MGR_LOGS_DIR//\\//}"
 
+# The merge dirver executable. This line is also the check if it is set.
+echo "MERGE_DRIVER_EXECUTABLE is ${MERGE_DRIVER_EXECUTABLE}."
 echo "Environment-vars exposed by merge_git_repos.py:"
 printenv | sort | grep MGR_
 
@@ -45,7 +47,7 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   echo "Installing the XML Maven merge-driver."
   git_cmd="git -C $MGR_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
   git_cmd+=" '"
-  git_cmd+="keep_ours_paths_merge_driver.pyz -O %O -A %A -B %B -P ./%P"
+  git_cmd+="$MERGE_DRIVER_EXECUTABLE -O %O -A %A -B %B -P ./%P"
   git_cmd+=" -p ./version ./parent/version ./properties/revision ./properties/:.+[.]version"
   git_cmd+="'"
   echo "Git-command: $git_cmd"
@@ -54,7 +56,7 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   echo "Install the JSON NPM merge-driver."
   git_cmd="git -C $MGR_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-merge-driver.driver"
   git_cmd+=" '"
-  git_cmd+="keep_ours_paths_merge_driver.pyz -t JSON -O %O -A %A -B %B -P ./%P"
+  git_cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P"
   git_cmd+=" -p version dependencies:@mycompany/.+"
   git_cmd+="'"
   eval "$git_cmd"

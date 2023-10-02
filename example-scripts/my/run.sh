@@ -7,10 +7,14 @@ LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs/$DATE_STRING"
 COMMON_DEST_BRANCH="ours-branch"
 
 export PATH=$(pwd)/merge-driver-binary:$PATH
-export MERGE_DRIVER_BINARY="keep_ours_paths_merge_driver.pyz"
+export MERGE_DRIVER_EXECUTABLE="keep_ours_paths_merge_driver.pyz"
+# Make Git (called by merge_git_repos.py) and the pre-script find the merge driver.
+# Setting the PATH in the pre-script is not sufficient, as Git must find it, and Git is called by
+# merge_git_repos.py
+export PATH=$(pwd)/merge-driver-executable:$PATH
 
-if ! which $MERGE_DRIVER_BINARY; then
-  echo "Can't execute $MERGE_DRIVER_BINARY. Is it on PATH?"
+if ! which "$MERGE_DRIVER_EXECUTABLE"; then
+  echo "Can't execute $MERGE_DRIVER_EXECUTABLE. Is it on PATH?"
   exit 1
 fi
 
