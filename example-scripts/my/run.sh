@@ -27,8 +27,14 @@ python3 ../../src/merge_git_repos.py \
   --pre-script 'bash -c ../../example-scripts/my/pre/clone_repos_and_install_merge-drivers.sh' \
   --post-script 'bash -c "echo 'FINISHED' ; printenv | grep MGR_ ; git -C $MGR_REPO_DIR status"' \
   --merge-branch-template \
-    "maintain/{{source_branch.replace('origin/','')}}_into_{{dest_branch}}_$DATE_STRING"
+  "maintain/{{source_branch.replace('origin/','')}}_into_{{dest_branch}}_$DATE_STRING"
 
 # --post-script 'bash -c "git push --set-upstream origin HEAD"' \
 
-echo "Exit code: $?"
+exit_code=$?
+echo "Exit code: $exit_code"
+if [[ $exit_code == 0 ]]; then
+  echo "$0: SUCCESS"
+else
+  echo "$0: FAILURE"
+fi
