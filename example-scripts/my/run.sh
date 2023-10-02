@@ -1,12 +1,16 @@
 #!/bin/bash
 
+#------------------------------------------------------------------------------------------- 100 --|
+
 REPOS_DIR="/Users/jo/prj-test/merge_git_repos/repos"
 DATE_STRING="$(date +'%Y%m%d-%H%M%S')"
 LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs/$DATE_STRING"
 
 COMMON_DEST_BRANCH="ours-branch"
 
-export PATH=$(pwd)/merge-driver-binary:$PATH
+# Register the merge drivers in <repo>/.git/info/attributs rather than rely on <repo>/.gitattributes.
+export REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES=true
+# The merge driver.
 export MERGE_DRIVER_EXECUTABLE="keep_ours_paths_merge_driver.pyz"
 # Make Git (called by merge_git_repos.py) and the pre-script find the merge driver.
 # Setting the PATH in the pre-script is not sufficient, as Git must find it, and Git is called by
