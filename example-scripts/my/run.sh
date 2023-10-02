@@ -4,13 +4,14 @@ REPOS_DIR="/Users/jo/prj-test/merge_git_repos/repos"
 DATE_STRING="$(date +'%Y%m%d-%H%M%S')"
 LOGS_DIR="/Users/jo/prj-test/merge_git_repos/logs/$DATE_STRING"
 
+COMMON_DEST_BRANCH="ours-branch"
+
 rm -rf "$REPOS_DIR"
 
 #The "bash -c" is needed in Git-Bash, and can be omitted otherwise.
 python3 ../../src/merge_git_repos.py \
   --repos-data \
-  mb:origin/master:test-feature-branch:jheger/stash-mybranches \
-  td:origin/master:test-feature-branch:jheger/stash-tagdetails \
+  mt-m:origin/theirs-branch:$COMMON_DEST_BRANCH:gldog/mergetest-maven \
   --merge-options '--no-ff -Xrenormalize -Xignore-space-at-eol' \
   --repos-dir $REPOS_DIR \
   --logs-dir $LOGS_DIR \
