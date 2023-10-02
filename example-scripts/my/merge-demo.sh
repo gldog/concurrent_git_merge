@@ -15,7 +15,8 @@ export MERGE_DRIVER_EXECUTABLE="keep_ours_paths_merge_driver.pyz"
 # Make Git (called by merge_git_repos.py) and the pre-script find the merge driver.
 # Setting the PATH in the pre-script is not sufficient, as Git must find it, and Git is called by
 # merge_git_repos.py
-export PATH=$(pwd):$PATH
+PATH=$(pwd):$PATH
+export PATH
 
 if ! which "$MERGE_DRIVER_EXECUTABLE"; then
   echo "Can't execute $MERGE_DRIVER_EXECUTABLE. Is it on PATH?"
@@ -24,8 +25,17 @@ fi
 
 rm -rf "$REPOS_DIR"
 
-#The "bash -c" is needed in Git-Bash, and can be omitted otherwise.
-python3 ../../src/merge_git_repos.py \
+# --pre-script: The "bash -c" is needed in Git-Bash, and can be omitted otherwise.
+#
+# Call-variants:
+#   Call the module (for development):
+#     python3 ../../src/merge_git_repos.py
+#   Call a fresh generated zipapp (for development):
+#     ../../merge_git_repos.pyz
+#   Call the zipapp from anywhere (production-like):
+#     merge_git_repos.pyz
+
+../../merge_git_repos.pyz \
   --repos-data \
   mt-m:origin/theirs-branch:$COMMON_DEST_BRANCH:gldog/mergetest-maven \
   --merge-options '--no-ff -Xrenormalize -Xignore-space-at-eol' \

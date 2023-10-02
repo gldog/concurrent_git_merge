@@ -92,14 +92,15 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   fi
   echo "  Calling resulting Git-command for cloning: $git_cmd"
   eval "$git_cmd"
-
-  # No else here. The "git pull" will be made by merge_git_repos.py.
+else
+  echo "  Repo $MGR_REPO_DIR is preset."
+  # No action here. The "git pull" will be made by merge_git_repos.py.
 fi
 
 # The same merge-driver can be defined repeatedly without error. So we don't care if it is already
 # installed.
 echo "Defining the merge drivers."
-echo "  Defining the XML Maven merge-driver:"
+echo "  Defining the XML Maven merge driver:"
 git_cmd="git -C $MGR_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
 git_cmd+=" '"
 git_cmd+="$MERGE_DRIVER_EXECUTABLE -O %O -A %A -B %B -P ./%P"
@@ -108,7 +109,7 @@ git_cmd+="'"
 echo "  Git-command: $git_cmd"
 eval "$git_cmd"
 
-echo "  Defining the JSON NPM merge-driver:"
+echo "  Defining the JSON NPM merge driver:"
 git_cmd="git -C $MGR_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-merge-driver.driver"
 git_cmd+=" '"
 git_cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P"
@@ -121,28 +122,26 @@ eval "$git_cmd"
 # is true und the setting is absent in .git/info/attributes.
 if [[ $REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES == true ]]; then
   ATTRIBUTES_FILE="$MGR_REPO_DIR/.git/info/attributes"
-  echo "  REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES is true." \
-    "Registering merge drivers in $ATTRIBUTES_FILE if absent."
+  echo "REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES is true." \
+    "Registering merge drivers in $ATTRIBUTES_FILE if not yet registered."
   MAVEN_POM_REGISTRATION="pom.xml merge=maven-pomxml-keep-ours-xpath-merge-driver"
   NPM_PACKAGE_JSON_REGISTRATION="package.json merge=npm-packagejson-keep-ours-jpath-merge-driver"
   if [[ ! -f "$ATTRIBUTES_FILE" ]]; then
-    echo "  $ATTRIBUTES_FILE is not present, creating it."
-    echo "  Registering Maven Pom merge driver in $ATTRIBUTES_FILE."
+    echo "  File $ATTRIBUTES_FILE is not present, creating it."
+    echo "  Registering Maven Pom merge driver in $ATTRIBUTES_FILE: $MAVEN_POM_REGISTRATION"
     echo "$MAVEN_POM_REGISTRATION" >>"$ATTRIBUTES_FILE"
-    echo "  Registering NPM package.json merge driver in $ATTRIBUTES_FILE."
+    echo "  Registering NPM package.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
     echo "$NPM_PACKAGE_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
   else
-    echo "  $ATTRIBUTES_FILE already present." \
-      "Checking if Maven Pom merge driver already registered in $ATTRIBUTES_FILE."
+    echo "  File $ATTRIBUTES_FILE already present."
+    echo "  Checking if Maven Pom merge driver already registered in $ATTRIBUTES_FILE."
     if ! grep -Fq "$MAVEN_POM_REGISTRATION" "$ATTRIBUTES_FILE"; then
-      echo "  Is not present. Registering Maven Pom merge driver in $ATTRIBUTES_FILE."
+      echo "  Is not present. Registering Maven Pom merge driver in $ATTRIBUTES_FILE: $MAVEN_POM_REGISTRATION"
       echo "$MAVEN_POM_REGISTRATION" >>"$ATTRIBUTES_FILE"
-    else
-      echo "  Registering Maven Pom merge driver in $ATTRIBUTES_FILE."
     fi
     echo "  Checking if NPM package.json merge driver already registered in $ATTRIBUTES_FILE."
     if ! grep -Fq "$NPM_PACKAGE_JSON_REGISTRATION" "$ATTRIBUTES_FILE"; then
-      echo "  Is not present. Registering NPM package.json merge driver in $ATTRIBUTES_FILE."
+      echo "  Is not present. Registering NPM package.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
       echo "$NPM_PACKAGE_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
     fi
   fi
