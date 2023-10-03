@@ -2,6 +2,8 @@
 
 #------------------------------------------------------------------------------------------- 100 --|
 #
+# Pre-script for merge_git_repos.py
+#
 # This script clones a Git repo if absent and installs custom merge driver(s).
 #
 # This script is called by merge_git_repos.py using parameter --pre-script. It is an example.

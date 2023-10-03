@@ -55,7 +55,7 @@ def init_argument_parser():
         given. Source- and dest-branches can be given individually for each repo, and as defaults to be
         used in multiple repos sharing these branch-names.
 
-        The merges are executed in parallel merge-tasks. For each task a logfile is written.
+        The merges are executed in concurrent merge-tasks. For each task a logfile is written.
 
         This script do not clone the repos. This is because you might post-process cloned repos, e.g.
         install merge-drivers.
@@ -181,10 +181,10 @@ def init_argument_parser():
                         help=textwrap.dedent("""\
                         This script is executed at the begin of each repo's merge-task. Here you can
                         clone the repos, install merge-drivers, and others. This script doesn't run
-                        in the repo's directory. Therefore the Git-command must be given with '-C',                          
-                        or you have to change to the repo's directory in the script.
-                        This script runs in an environment with repo-specific environment variables
-                        exposed:
+                        in the repo's directory. Therefore the Git-command must be given with 
+                        '-C $MGR_REPO_DIR', or you have to change to the repo's directory in the
+                        script. This script runs in an environment with repo-specific environment
+                        variables exposed:
                           o MGR_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
                           o MGR_SOURCE_BRANCH   From parameter -r/--repos-data the 2nd part
@@ -205,17 +205,18 @@ def init_argument_parser():
                           o MGR_REPOS_DIR       From parameter -d/--repos-dir.
                           o MGR_LOGS_DIR        From parameter -o/--logs-dir.
                         For cloning you'll use MGR_REPOS_DIR, and for commands inside a repo you'll
-                        use MGR_REPO_DIR."""))
+                        use MGR_REPO_DIR.
+                        On Windows and Gitbash you should call the script with 'bash -c your-script.sh'
+                        Otherwise it could be Windows opens it with the default-application, which could
+                        be a text editor."""))
     parser.add_argument('--post-script',
                         help=textwrap.dedent("""\
                         This script is executed at the end of each repo's merge-task. Here you can
                         push the result, create pull-requests, and others. This script doesn't run
-                        in the repo's directory (use '-C' instead). This script runs in an
-                        environment with repo-specific environment variables exposed as described
-                        in --pre-script.
+                        in the repo's directory (see --pre-script). This script runs in an environment
+                        with repo-specific environment variables exposed as described in --pre-script.
                         A most simple post-script parameter could be:
                             --post-script 'bash -c "git push --set-upstream origin HEAD"' """))
-
     return parser
 
 

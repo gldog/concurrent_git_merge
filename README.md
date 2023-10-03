@@ -1,68 +1,79 @@
 # README #
 
-    $ python src/merge_git_repos.py -h
-    usage: merge_git_repos.py [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
-                              [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
-                              LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
-                              [-t MERGE_BRANCH_TEMPLATE] [--local] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
-                              [-e EXEC_PRE_MERGE_SCRIPT]
+# Manual
+
+    $ python merge_git_repos.pyz -h
+    usage: merge_git_repos.pyz [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
+                               [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
+                               LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
+                               [-t MERGE_BRANCH_TEMPLATE] [--no-pull] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+                               [--pre-script PRE_SCRIPT] [--post-script POST_SCRIPT]
     
     This script do merges in a list of repos. For each repo, a source-branch and a dest-branch must be
     given. Source- and dest-branches can be given individually for each repo, and as defaults to be
     used in multiple repos sharing these branch-names.
     
-    The merges are executed in parallel. For each task a logfile is written.
+    The merges are executed in concrrent merge-tasks. For each task a logfile is written.
     
     This script do not clone the repos. This is because you might post-process cloned repos, e.g.
     install merge-drivers.
     
-    Before each merge, an optional pre-merge-script can be executed, given in parameter
-    -e/--exec-pre-merge-script.
+    At the begin of a task, an optional pre-script given in --pre-script can be executed. Also at the end
+    of a task an optional post-script given in --post-script can be executed.
+    
+    Overview of commands:
+        pre_script, if given in --pre-script
+        git reset --hard
+        git clean -fd
+        git checkout {dest_branch}
+        git pull --ff, if --no-pull is not given
+        create merge-branch and checkout, if --merge-branch-template is given
+        git merge --no-edit {merge_options} {source_branch}
+        post_script, if given in --post-script
     
     optional arguments:
       -h, --help            show this help message and exit
       -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...], --repos-data repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...]
                             Information about the repos and branches to be processed. They are given as
                             positional parts, delimited by colon ':'.
-                                1. 'repo_local_name', mandatory
-                                    The name of the repo as it exists in the repos-directory.
-                                2. 'source_branch', optional
-                                    The branch to be merged into the dest-branch. If omitted it falls
-                                    back to -S/--default-source-branch. At least one of the two must be
-                                    given.
-                                3. 'dest_branch', optional
-                                    The branch to be updated from the source-branch. If omitted it
-                                    falls back to -D/--default-dest-branch. At lest one of the two must
-                                    be given.
-                                4. 'prj/repo_remote_name', optional
-                                    The remote project- and repo-name. Exposed as environment variable
-                                    to the script given in -e/--exec-pre-merge-script.
-                                    The 'prj'-part is the Bitbucket-project or the Github-username or
-                                    the Gitlab-namespace.
+                              1. 'repo_local_name', mandatory
+                                  The name of the repo as it exists in the repos-directory.
+                              2. 'source_branch', optional
+                                  The branch to be merged into the dest-branch. If omitted it falls
+                                  back to -S/--default-source-branch. At least one of the two must be
+                                  given.
+                              3. 'dest_branch', optional
+                                  The branch to be updated from the source-branch. If omitted it falls
+                                  back to -D/--default-dest-branch. At lest one of the two must be given.
+                              4. 'prj/repo_remote_name', optional
+                                  The remote project- and repo-name. Exposed as environment variable to
+                                  the script given in --pre-script.
+                                  The 'prj'-part is the Bitbucket-project or the Github-username or the
+                                  Gitlab-namespace.
                             The full notation is:
                                     -r repo_local_name:source_branch:dest_branch:prj/repo_remote_name
                             Optional parts may be empty:
                                     -r repo_local_name:::
-                            Delimiters of empty parts can be omitted from right to left.
-                            The above parameter can be given as:
+                            Delimiters of empty parts can be omitted from right to left. The above
+                            parameter can be given as:
                                     -r repo_local_name
                             The repos given in this parameter should exist in -d/--repos-dir. This
                             script does not clone missing repos. If a repo is missing, its merge-task
                             will be aborted and an error-message will be printed, but the script will
                             continue and all existing repos will be merged.
                             Examples:
-                            1) One Repo with source- and dest-branches given
+                              1) One Repo with source- and dest-branches given
                                     -r my-repo-1:origin/master:my-feature
                                 The last part 'prj/repo-remote-name' is not given, the last delimiter
                                 ':' is omitted.
-                            2) Two repos sharing source- and -dest-branch-names
+                              2) Two repos sharing source- and -dest-branch-names
                                     -r product1-module1 product1-module2 \
                                         -S origin/master -D my-feature
                                 That is the short notation. As the parts are delimited by colon ':',
                                 the full also valid notation would be:
                                     -r product1-module1::: product1-module2::: \
                                         -S origin/master -D my-feature
-                            3) As example 2), but with abbreviated local repo-names, and
+                              3) As example 2), but with abbreviated local repo-names, and
                                 'prj/repo_remote_name' given as named on the remote, to be exposed to
                                 the pre-merge-script. Because the parts are positional, the delimiters
                                 must be given.
@@ -85,6 +96,10 @@
       -t MERGE_BRANCH_TEMPLATE, --merge-branch-template MERGE_BRANCH_TEMPLATE
                             Create a merge-branch based on the dest-branch and do the merge in this
                             branch. If the merge-branch exists it will be deleted and re-created.
+                            A merge-branch typically is used in case you wan't to create a pull-request
+                            from the merge-result to an upstream-branch. Either because you want QA
+                            on the PR, or you have no permission to merge into the target-branch
+                            directly.
                             The template generating the name of the merge-branch is a jinja2-template
                             and understands the following placeholders:
                               o repo_local_name     From parameter -r/--repos-data the 1st part
@@ -100,36 +115,82 @@
                               o repo_data_from_parameter    From parameter -r/--repos-data the
                                                     complete string.
                               o task_start          The timestamp the repo's task has been started.
-                            The task_start is of Pythontype 'datetime'. strftime() can be used to
-                            generate a pretty-print timestamp.
-                            An example to be used in a  bash-script:
-                                parameters=" --merge-branch-template"
+                            The task_start is of Python-type 'datetime'. strftime() can be used to
+                            generate a pretty-print timestamp. An example to be used in a bash-script:
+                                parameters=" --merge-branch-template
                                 parameters+=" merge/from_{{source_branch.replace('origin/','')}}"
-                                parameters+="_into_{{dest_branch}}_{{task_start.strftime('%b%d')}}"
-      --local               Skip the git pull command. Allows to merge a local-only source-branch that
+                                parameters+="_into_{{dest_branch}}_{{task_start.strftime('%Y%m%d-%H%M%S')}}"
+                            The task's timestamps are very close to the one the script was started. But you might
+                            prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
+                                DATE_STR="$(date +'%Y%m%d-%H%M%S')"
+                                merge_git_repos.py \
+                                  --merge-branch-template "merge/...$DATE_STR" \
+                                  --logs-dir "./logs/$DATE_STRING" \
+                                  ... 
+      --no-pull             Skip the git pull command. Allows to merge a local-only source-branch that
                             has no tracking remote-branch.
       -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Defaults to INFO.
-      -e EXEC_PRE_MERGE_SCRIPT, --exec-pre-merge-script EXEC_PRE_MERGE_SCRIPT
-                            This script is executed in each repo's merge-task, means it runs parallel.
-                            Here you can clone the repos, install merge-drivers, and others.
+      --pre-script PRE_SCRIPT
+                            This script is executed at the begin of each repo's merge-task. Here you can
+                            clone the repos, install merge-drivers, and others. This script doesn't run
+                            in the repo's directory. Therefore the Git-command must be given with '-C',                          
+                            or you have to change to the repo's directory in the script.
                             This script runs in an environment with repo-specific environment variables
                             exposed:
-                            o MGR_REPO_LOCAL_NAME   From parameter -r/--repos-data the 1st part
+                              o MGR_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                     'repo_local_name'.
-                            o MGR_SOURCE_BRANCH     From parameter -r/--repos-data the 2nd part
+                              o MGR_SOURCE_BRANCH   From parameter -r/--repos-data the 2nd part
                                                     'source_branch', or the default-source-branch -S if
                                                     absent.
-                            o MGR_DEST_BRANCH       From parameter -r/--repos-data the 3rd part
+                              o MGR_DEST_BRANCH     From parameter -r/--repos-data the 3rd part
                                                     'dest-branch', or the default-dest-branch -D if
                                                     absent.
-                            o MGR_PRJ_AND_REPO_REMOTE_NAME  From parameter -r/--repos-data the 4th
+                              o MGR_PRJ_AND_REPO_REMOTE_NAME    From parameter -r/--repos-data the 4th
                                                     part 'prj/repo-remote-name'.
-                            o MGR_REPO_DATA_FROM_PARAMETER  From parameter -r/--repos-data the
+                              o MGR_REPO_DATA_FROM_PARAMETER    From parameter -r/--repos-data the
                                                     complete string.
-                            o MGR_TASK_START        The timestamp the repo's task has been started.
-                            o MGR_MERGE_BRANCH      From parameter -m/--merge-branch-template if given,
+                              o MGR_TASK_START      The timestamp the repo's task has been started.
+                              o MGR_MERGE_BRANCH    From parameter -m/--merge-branch-template if given,
                                                     with placeholders replaced.
-                            o MGR_REPOS_DIR         From parameter -d/--repos-dir.
-                            o MGR_REPO_DIR          From parameter -d, extended by a timestamp and the
-                                                    'repo_local_name' part of parameter -r/--repos-data. 
+                              o MGR_REPO_DIR        From parameter -d, extended by a timestamp and the
+                                                    'repo_local_name' part of parameter -r/--repos-data.
+                              o MGR_REPOS_DIR       From parameter -d/--repos-dir.
+                              o MGR_LOGS_DIR        From parameter -o/--logs-dir.
+                            For cloning you'll use MGR_REPOS_DIR, and for commands inside a repo you'll
+                            use MGR_REPO_DIR.
+      --post-script POST_SCRIPT
+                            This script is executed at the end of each repo's merge-task. Here you can
+                            push the result, create pull-requests, and others. This script doesn't run
+                            in the repo's directory (use '-C' instead). This script runs in an
+                            environment with repo-specific environment variables exposed as described
+                            in --pre-script.
+                            A most simple post-script parameter could be:
+                                --post-script 'bash -c "git push --set-upstream origin HEAD"'
+
+# Create a zipapp
+
+You can create a fully self-contained executable zipapp `merge_git_repos.pyz` with all dependencies bundled into one
+file. This allows simple distribution without letting the uses install dependencies.
+
+In Linux and MacOS:
+
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    python -m shiv -c src -o merge_git_repos.pyz .
+
+In Windows Gitbash:
+
+    python -m venv venv
+    source venv/Scripts/activate
+    pip install -r requirements.txt
+    # Parameter -p may differ on your system.
+    python -m shiv -c src -p /c/Programme/Python3/python -o merge_git_repos.pyz .
+
+In Windows CMD:
+
+    python -m venv venv
+    venv\Scripts\activate.bat
+    pip install -r requirements.txt
+    python -m shiv -c src -o merge_git_repos.pyz .
