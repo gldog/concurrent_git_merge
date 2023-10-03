@@ -1,2 +1,2 @@
-jinja2
-shiv
+jinja2==3.1.2
+shiv==1.0.3
