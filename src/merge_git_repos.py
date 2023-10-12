@@ -28,13 +28,14 @@ g_logger = logging.getLogger()
 
 def configure_logger(log_level, logs_dir):
     logger = logging.getLogger()
-    # See also https://docs.python.org/3/howto/logging.html:
-    # The check for valid values have been done in parser.add_argument().
-    # setLevel() takes string-names as well as numeric levels.
-    logger.setLevel(log_level)
     # Set basicConfig() to get levels less than WARNING running in our logger.
     # See https://stackoverflow.com/questions/56799138/python-logger-not-printing-info
     logging.basicConfig(level=logging.DEBUG)
+    # See also https://docs.python.org/3/howto/logging.html:
+    # The check for valid values have been done in parser.add_argument().
+    # setLevel() takes string-names as well as numeric levels.
+    # Must be set after logging.basicConfig(). If set before, the level is the one of basicConfig().
+    logger.setLevel(log_level)
     log_formatter = logging.Formatter(f'%(asctime)s:{SCRIPT_NAME}:%(levelname)s: %(message)s')
     logger.handlers[0].setFormatter(log_formatter)
     # Add a file-handler.
