@@ -141,8 +141,10 @@ def init_argument_parser():
     parser.add_argument('-t', '--merge-branch-template',
                         help=textwrap.dedent("""\
                         Create a merge-branch based on the dest-branch and do the merge in this
-                        branch. If the merge-branch exists it will be deleted and re-created.
-                        A merge-branch typically is used in case you wan't to create a pull-request
+                        branch. If the merge-branch exists it will be reused. This allows continuing
+                        a merge by calling the merge script again (if the merge-branch name doesn't
+                        have a date generated at the time of calling the merge script).
+                        A merge-branch typically is used in case you wan't to create a pull request
                         from the merge-result to an upstream-branch. Either because you want QA
                         on the PR, or you have no permission to merge into the target-branch
                         directly.
@@ -431,22 +433,30 @@ def execute_merge(repo_metadata):
             r = run_command(f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}',
                             repo_local_name, logfile_name, honor_returncode=False, suppress_stdout=True)
             if r.returncode == 0:
-                # The merge-branch exists, delete it.
-                run_command(f'git -C {repo_dir} branch -D {repo_metadata["merge_branch"]}', repo_local_name,
-                            logfile_name)
+                log_task(logfile_name, "  (Merge-branch present, reuse it)\n\n")
+                b = ''
             else:
                 log_task(logfile_name, "  (Merge-branch not present)\n\n")
-                run_command(f'git -C {repo_dir} checkout -b {repo_metadata["merge_branch"]}', repo_local_name,
-                            logfile_name)
+                b = '-b '
 
-        run_command(f'git -C {repo_dir} merge --no-edit {g_cl_args.merge_options} {source_branch}', repo_local_name,
-                    logfile_name)
+            run_command(f'git -C {repo_dir} checkout {b}{repo_metadata["merge_branch"]}', repo_local_name,
+                        logfile_name)
+
+        # On merge-conflicts, git merge exists with 1. Ignore this exit code to allow running the post-script regardless
+        # of the merge result. But signal that after the post-script has been run.
+        r_merge = run_command(f'git -C {repo_dir} merge --no-edit {g_cl_args.merge_options} {source_branch}',
+                              repo_local_name, logfile_name, honor_returncode=False)
 
         if g_cl_args.post_script:
             log_task(logfile_name, "POST-SCRIPT BEGIN >>>>>\n")
             command = g_cl_args.post_script
             run_command(command, repo_local_name, logfile_name, env=extended_env)
             log_task(logfile_name, ">>>>> POST-SCRIPT END\n")
+
+        if r_merge.returncode != 0:
+            # Signal the merge failed.
+            error_msg = f"{repo_dir}: git merge exited with non-zero status. Output: {r_merge.stdout}"
+            raise Exception(error_msg)
 
     except Exception as e:
         task_finish_status = "with FAILURE"
