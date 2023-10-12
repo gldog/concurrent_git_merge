@@ -51,14 +51,16 @@ def init_argument_parser():
 
         # -- 50 --------------- | ---------------------------------------------------------------- 100 -- #
         description=textwrap.dedent("""\
-        This script do merges in a list of repos. For each repo, a source-branch and a dest-branch must be
-        given. Source- and dest-branches can be given individually for each repo, and as defaults to be
-        used in multiple repos sharing these branch-names.
+        This script do merges in a list of repos. It was written to handle merges in projects comprising of
+        multiple Git repositories but with shared source- and dest-branch names.
+        
+        The shared source- and dest-branch names can be given globally, but branch names specific to a repo
+        can also be given individually.
 
         The merges are executed in concurrent merge-tasks. For each task a logfile is written.
 
-        This script do not clone the repos. This is because you might post-process cloned repos, e.g.
-        install merge-drivers.
+        This script do not clone the repos. This is because you might post-process cloned repos before merging, e.g.
+        define merge-drivers and register them in $GIT_DIR/info/attributes.
 
         At the begin of a task, an optional pre-script given in --pre-script can be executed. Also at the end
         of a task an optional post-script given in --post-script can be executed.
@@ -200,23 +202,25 @@ def init_argument_parser():
                           o MGR_TASK_START      The timestamp the repo's task has been started.
                           o MGR_MERGE_BRANCH    From parameter -m/--merge-branch-template if given,
                                                 with placeholders replaced.
-                          o MGR_REPO_DIR        From parameter -d, extended by a timestamp and the
-                                                'repo_local_name' part of parameter -r/--repos-data.
+                          o MGR_REPO_DIR        'repo_local_name' part of parameter -r/--repos-data,
+                                                prefixed with parameter -d.
                           o MGR_REPOS_DIR       From parameter -d/--repos-dir.
                           o MGR_LOGS_DIR        From parameter -o/--logs-dir.
                         For cloning you'll use MGR_REPOS_DIR, and for commands inside a repo you'll
                         use MGR_REPO_DIR.
                         On Windows and Gitbash you should call the script with 'bash -c your-script.sh'
-                        Otherwise it could be Windows opens it with the default-application, which could
-                        be a text editor."""))
+                        Otherwise it could be Windows opens it with the default-application, e.g. a
+                        text editor."""))
     parser.add_argument('--post-script',
                         help=textwrap.dedent("""\
-                        This script is executed at the end of each repo's merge-task. Here you can
-                        push the result, create pull-requests, and others. This script doesn't run
-                        in the repo's directory (see --pre-script). This script runs in an environment
-                        with repo-specific environment variables exposed as described in --pre-script.
+                        This script is executed at the end of each repo's merge-task, regardless of the
+                        merge result. Here you can push the result, create pull requests, and others.
+                        This script doesn't run in the repo's directory (see --pre-script). This script
+                        runs in an environment with repo-specific environment variables exposed as
+                        described in --pre-script.
                         A most simple post-script parameter could be:
-                            --post-script 'bash -c "git push --set-upstream origin HEAD"' """))
+                            --post-script 'bash -c "git push --set-upstream origin HEAD"'
+                        (The push --set-upstream can be executed multiple times without error.)"""))
     return parser
 
 
@@ -401,6 +405,7 @@ def execute_merge(repo_metadata):
                 extended_env[env_var_name] = value
         if g_cl_args.pre_script:
             log_task(logfile_name, "PRE-SCRIPT BEGIN >>>>>\n")
+            log_task(logfile_name, "# Pre-script called by command:\n")
             command = g_cl_args.pre_script
             run_command(command, repo_local_name, logfile_name, env=extended_env)
             log_task(logfile_name, ">>>>> PRE-SCRIPT END\n")
@@ -421,8 +426,8 @@ def execute_merge(repo_metadata):
 
         if g_cl_args.merge_branch_template:
             # Delete the merge-branch if it exists.
-            # suppress_stdout=True:
-            # The command returns an empty line. This looks a bit confusing in the logfile.
+            # suppress_stdout=True: The command returns an empty line. This looks a bit confusing in the logfile. Avoid
+            # that.
             r = run_command(f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}',
                             repo_local_name, logfile_name, honor_returncode=False, suppress_stdout=True)
             if r.returncode == 0:
