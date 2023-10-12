@@ -70,9 +70,8 @@ def init_argument_parser():
             git reset --hard
             git clean -fd
             git checkout {dest_branch}
-            git pull --ff, if --no-pull is not given
-            create merge-branch and checkout, if --merge-branch-template is given
-            git merge --no-edit {merge_options} {source_branch}
+            Create merge branch and checkout, if --merge-branch-template is given.
+            git merge --no-edit {merge_options} {source_branch|merge-branch}
             post_script, if given in --post-script"""))
     parser.add_argument('-r', '--repos-data', required=True, nargs='+',
                         metavar='repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]',
@@ -175,10 +174,6 @@ def init_argument_parser():
                               --merge-branch-template "merge/...$DATE_STR" \\
                               --logs-dir "./logs/$DATE_STRING" \\
                               ... """))
-    parser.add_argument('--no-pull', default=False, action='store_true',
-                        help=textwrap.dedent("""\
-                        Skip the git pull command. Allows to merge a local-only source-branch that
-                        has no tracking remote-branch."""))
     parser.add_argument('-l', '--log-level', choices=LOG_LEVELS, default=DEFAULT_LOGLEVEL,
                         help=f"Defaults to {DEFAULT_LOGLEVEL}.")
     parser.add_argument('--pre-script',
@@ -422,9 +417,6 @@ def execute_merge(repo_metadata):
         run_command(f'git -C {repo_dir} reset --hard', repo_local_name, logfile_name)
         run_command(f'git -C {repo_dir} clean -fd', repo_local_name, logfile_name)
         run_command(f'git -C {repo_dir} checkout {dest_branch}', repo_local_name, logfile_name)
-
-        if not g_cl_args.no_pull:
-            run_command(f'git -C {repo_dir} pull --ff', repo_local_name, logfile_name)
 
         if g_cl_args.merge_branch_template:
             # Delete the merge-branch if it exists.
