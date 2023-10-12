@@ -2,21 +2,23 @@
 
 # Manual
 
-    $ python merge_git_repos.pyz -h
-    usage: merge_git_repos.pyz [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
-                               [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
-                               LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
-                               [-t MERGE_BRANCH_TEMPLATE] [--no-pull] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
-                               [--pre-script PRE_SCRIPT] [--post-script POST_SCRIPT]
+    $ python3 ../../src/merge_git_repos.py -h
+    usage: merge_git_repos.py [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
+                              [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
+                              LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
+                              [-t MERGE_BRANCH_TEMPLATE] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [--pre-script PRE_SCRIPT]
+                              [--post-script POST_SCRIPT]
     
-    This script do merges in a list of repos. For each repo, a source-branch and a dest-branch must be
-    given. Source- and dest-branches can be given individually for each repo, and as defaults to be
-    used in multiple repos sharing these branch-names.
+    This script do merges in a list of repos. It was written to handle merges in projects comprising of
+    multiple Git repositories but with shared source- and dest-branch names.
     
-    The merges are executed in concrrent merge-tasks. For each task a logfile is written.
+    The shared source- and dest-branch names can be given globally, but branch names specific to a repo
+    can also be given individually.
     
-    This script do not clone the repos. This is because you might post-process cloned repos, e.g.
-    install merge-drivers.
+    The merges are executed in concurrent merge-tasks. For each task a logfile is written.
+    
+    This script do not clone the repos. This is because you might post-process cloned repos before merging, e.g.
+    define merge-drivers and register them in $GIT_DIR/info/attributes.
     
     At the begin of a task, an optional pre-script given in --pre-script can be executed. Also at the end
     of a task an optional post-script given in --post-script can be executed.
@@ -26,9 +28,8 @@
         git reset --hard
         git clean -fd
         git checkout {dest_branch}
-        git pull --ff, if --no-pull is not given
-        create merge-branch and checkout, if --merge-branch-template is given
-        git merge --no-edit {merge_options} {source_branch}
+        Create merge branch and checkout, if --merge-branch-template is given.
+        git merge --no-edit {merge_options} {source_branch|merge-branch}
         post_script, if given in --post-script
     
     optional arguments:
@@ -95,8 +96,10 @@
                             The option --no-edit is always set internally.
       -t MERGE_BRANCH_TEMPLATE, --merge-branch-template MERGE_BRANCH_TEMPLATE
                             Create a merge-branch based on the dest-branch and do the merge in this
-                            branch. If the merge-branch exists it will be deleted and re-created.
-                            A merge-branch typically is used in case you wan't to create a pull-request
+                            branch. If the merge-branch exists it will be reused. This allows continuing
+                            a merge by calling the merge script again (if the merge-branch name doesn't
+                            have a date generated at the time of calling the merge script).
+                            A merge-branch typically is used in case you wan't to create a pull request
                             from the merge-result to an upstream-branch. Either because you want QA
                             on the PR, or you have no permission to merge into the target-branch
                             directly.
@@ -127,17 +130,15 @@
                                   --merge-branch-template "merge/...$DATE_STR" \
                                   --logs-dir "./logs/$DATE_STRING" \
                                   ... 
-      --no-pull             Skip the git pull command. Allows to merge a local-only source-branch that
-                            has no tracking remote-branch.
       -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Defaults to INFO.
       --pre-script PRE_SCRIPT
                             This script is executed at the begin of each repo's merge-task. Here you can
                             clone the repos, install merge-drivers, and others. This script doesn't run
-                            in the repo's directory. Therefore the Git-command must be given with '-C',                          
-                            or you have to change to the repo's directory in the script.
-                            This script runs in an environment with repo-specific environment variables
-                            exposed:
+                            in the repo's directory. Therefore the Git-command must be given with 
+                            '-C $MGR_REPO_DIR', or you have to change to the repo's directory in the
+                            script. This script runs in an environment with repo-specific environment
+                            variables exposed:
                               o MGR_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                     'repo_local_name'.
                               o MGR_SOURCE_BRANCH   From parameter -r/--repos-data the 2nd part
@@ -153,27 +154,31 @@
                               o MGR_TASK_START      The timestamp the repo's task has been started.
                               o MGR_MERGE_BRANCH    From parameter -m/--merge-branch-template if given,
                                                     with placeholders replaced.
-                              o MGR_REPO_DIR        From parameter -d, extended by a timestamp and the
-                                                    'repo_local_name' part of parameter -r/--repos-data.
+                              o MGR_REPO_DIR        'repo_local_name' part of parameter -r/--repos-data,
+                                                    prefixed with parameter -d.
                               o MGR_REPOS_DIR       From parameter -d/--repos-dir.
                               o MGR_LOGS_DIR        From parameter -o/--logs-dir.
                             For cloning you'll use MGR_REPOS_DIR, and for commands inside a repo you'll
                             use MGR_REPO_DIR.
+                            On Windows and Gitbash you should call the script with 'bash -c your-script.sh'
+                            Otherwise it could be Windows opens it with the default-application, e.g. a
+                            text editor.
       --post-script POST_SCRIPT
-                            This script is executed at the end of each repo's merge-task. Here you can
-                            push the result, create pull-requests, and others. This script doesn't run
-                            in the repo's directory (use '-C' instead). This script runs in an
-                            environment with repo-specific environment variables exposed as described
-                            in --pre-script.
+                            This script is executed at the end of each repo's merge-task, regardless of the
+                            merge result. Here you can push the result, create pull requests, and others.
+                            This script doesn't run in the repo's directory (see --pre-script). This script
+                            runs in an environment with repo-specific environment variables exposed as
+                            described in --pre-script.
                             A most simple post-script parameter could be:
                                 --post-script 'bash -c "git push --set-upstream origin HEAD"'
+                            (The push --set-upstream can be executed multiple times without error.)
 
-# Create a zipapp
+# Create a fully self-contained executable zipapp
 
 You can create a fully self-contained executable zipapp `merge_git_repos.pyz` with all dependencies bundled into one
 file. This allows simple distribution without letting the uses install dependencies.
 
-In Linux and MacOS:
+In Linux and macOS:
 
     python3 -m venv venv
     source venv/bin/activate
