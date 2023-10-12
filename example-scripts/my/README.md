@@ -123,7 +123,7 @@ Merge conflicts are resolved on the merge-branch before creating the pull reques
 
 This demo combines two topics:
 
-1. Demonstrate how to configure the merge_git_repos.py.
+1. Demonstrate how to configure the concurrent_git_merge.py.
 2. Demonstrate how to use a merge driver.
 
 Directory content:
@@ -134,8 +134,8 @@ Directory content:
 * merge-demo.sh: Overall script
 * post-script.sh: Post-script (under development, not checked-in yet)
 
-The overall script merge-demo.sh configures and calls merge_git_repos.py.
-merge_git_repos.py calls the pre-script and triggers the `git merge`.
+The overall script merge-demo.sh configures and calls concurrent_git_merge.py.
+concurrent_git_merge.py calls the pre-script and triggers the `git merge`.
 The `git merge` calls the merge driver.
 
 # Chars

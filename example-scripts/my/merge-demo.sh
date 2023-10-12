@@ -4,12 +4,12 @@
 
 set -u
 #
-# This script demonstrates the usage of merge_git_repos.py in combination of the merge driver
+# This script demonstrates the usage of concurrent_git_merge.py in combination of the merge driver
 # keep_ours_paths_merge_driver (https://github.com/gldog/keep_ours_paths_merge_driver).
 # The demo comprises of:
 #   - This script merge-demo.sh
 #       Set source- and dest-branches, and others.
-#   - merge_git_repos.py (or the zipapp merge_git_repos.pyz)
+#   - concurrent_git_merge.py (or the zipapp concurrent_git_merge.pyz)
 #   - The pre-script clone_repos_and_install_mergedrivers.sh, called per repo.
 #       Clones a repo if absent, installs merge drivers.
 #   - The post-script post_merge.sh, called per repo.
@@ -83,7 +83,7 @@ export IS_CREATE_PULL_REQUEST_URLS
 
 # Jinja2 template.
 # The source- and dest-branches can be distinct to each repo when different to the default branches.
-# So the merge_git_repos.py has to create the merge-branch name (if either source- or dest-branch, or
+# So the concurrent_git_merge.py has to create the merge-branch name (if either source- or dest-branch, or
 # both, should be part of the name).
 MERGE_BRANCH_TEMPLATE="merge/"
 MERGE_BRANCH_TEMPLATE+="{{source_branch.replace('origin/','').replace('/', '_')}}"
@@ -108,9 +108,9 @@ export IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES=true
 # not callable.
 export MERGE_DRIVER_EXECUTABLE="keep_ours_paths_merge_driver.pyz"
 
-# Make Git (called by merge_git_repos.py) and the pre-script find the merge driver.
+# Make Git (called by concurrent_git_merge.py) and the pre-script find the merge driver.
 # Setting the PATH in the pre-script is not sufficient, as Git must find it, and Git is called by
-# merge_git_repos.py
+# concurrent_git_merge.py
 PATH=$(pwd):$PATH
 export PATH
 
@@ -153,8 +153,8 @@ fi
 #       'bash -c "git push --set-upstream origin HEAD"'
 #
 
-#../../merge_git_repos.pyz \
-python ../../src/merge_git_repos.py \
+#../../concurrent_git_merge.pyz \
+python ../../src/concurrent_git_merge.py \
   --repos-data \
   mdtr:$COMMON_SOURCE_BRANCH:$COMMON_DEST_BRANCH:jheger/mergedriver-testrepo \
   --default-source-branch "$COMMON_SOURCE_BRANCH" \
@@ -163,7 +163,7 @@ python ../../src/merge_git_repos.py \
   --merge-options "--no-ff -Xrenormalize -Xignore-space-at-eol" \
   --repos-dir "$REPOS_DIR" \
   --logs-dir "$LOGS_DIR" \
-  --log-level DEBUG \
+  --log-level INFO \
   --pre-script "bash -c clone_repos_and_install_mergedrivers.sh" \
   --post-script "bash -c post_merge.sh"
 

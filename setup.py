@@ -1,7 +1,7 @@
 import os
 
 from setuptools import setup
-from src.merge_git_repos import __version__
+from src.concurrent_git_merge import __version__
 
 lib_folder = os.path.dirname(os.path.realpath(__file__))
 requirement_path = f"{lib_folder}/requirements.txt"
@@ -17,6 +17,6 @@ setup(
     packages=['src'],
     install_requires=install_requires,
     entry_points={
-        'console_scripts': ['src=src.merge_git_repos:main'],
+        'console_scripts': ['src=src.concurrent_git_merge:main'],
     },
 )

@@ -171,7 +171,7 @@ def init_argument_parser():
                         The task's timestamps are very close to the one the script was started. But you might
                         prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
                             DATE_STR="$(date +'%%Y%%m%%d-%%H%%M%%S')"
-                            merge_git_repos.py \\
+                            concurrent_git_merge.py \\
                               --merge-branch-template "merge/...$DATE_STR" \\
                               --logs-dir "./logs/$DATE_STRING" \\
                               ... """))
@@ -402,11 +402,11 @@ def execute_merge(repo_metadata):
                     value = value.isoformat()
                 extended_env[env_var_name] = value
         if g_cl_args.pre_script:
-            log_task(logfile_name, "PRE-SCRIPT BEGIN >>>>>\n")
+            log_task(logfile_name, "\nPRE-SCRIPT BEGIN >>>>>\n\n")
             log_task(logfile_name, "# Pre-script called by command:\n")
             command = g_cl_args.pre_script
             run_command(command, repo_local_name, logfile_name, env=extended_env)
-            log_task(logfile_name, ">>>>> PRE-SCRIPT END\n")
+            log_task(logfile_name, ">>>>> PRE-SCRIPT END\n\n")
 
         # The repo is expected to be present.
         if not pathlib.Path(repo_dir, '.git').is_dir():
@@ -426,7 +426,7 @@ def execute_merge(repo_metadata):
             r = run_command(f'git -C {repo_dir} show-ref --verify --quiet refs/heads/{repo_metadata["merge_branch"]}',
                             repo_local_name, logfile_name, honor_returncode=False, suppress_stdout=True)
             if r.returncode == 0:
-                log_task(logfile_name, "  (Merge-branch present, reuse it)\n\n")
+                log_task(logfile_name, "  (Merge-branch is present, reuse it)\n\n")
                 b = ''
             else:
                 log_task(logfile_name, "  (Merge-branch not present)\n\n")
@@ -441,10 +441,10 @@ def execute_merge(repo_metadata):
                               repo_local_name, logfile_name, honor_returncode=False)
 
         if g_cl_args.post_script:
-            log_task(logfile_name, "POST-SCRIPT BEGIN >>>>>\n")
+            log_task(logfile_name, "POST-SCRIPT BEGIN >>>>>\n\n")
             command = g_cl_args.post_script
             run_command(command, repo_local_name, logfile_name, env=extended_env)
-            log_task(logfile_name, ">>>>> POST-SCRIPT END\n")
+            log_task(logfile_name, ">>>>> POST-SCRIPT END\n\n")
 
         if r_merge.returncode != 0:
             # Signal the merge failed.

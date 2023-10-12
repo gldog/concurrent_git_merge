@@ -2,8 +2,8 @@
 
 # Manual
 
-    $ python3 ../../src/merge_git_repos.py -h
-    usage: merge_git_repos.py [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
+    $ python3 ../../src/concurrent_git_merge.py -h
+    usage: concurrent_git_merge.py [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
                               [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
                               LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
                               [-t MERGE_BRANCH_TEMPLATE] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [--pre-script PRE_SCRIPT]
@@ -126,7 +126,7 @@
                             The task's timestamps are very close to the one the script was started. But you might
                             prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
                                 DATE_STR="$(date +'%Y%m%d-%H%M%S')"
-                                merge_git_repos.py \
+                                concurrent_git_merge.py \
                                   --merge-branch-template "merge/...$DATE_STR" \
                                   --logs-dir "./logs/$DATE_STRING" \
                                   ... 
@@ -175,7 +175,7 @@
 
 # Create a fully self-contained executable zipapp
 
-You can create a fully self-contained executable zipapp `merge_git_repos.pyz` with all dependencies bundled into one
+You can create a fully self-contained executable zipapp `concurrent_git_merge.pyz` with all dependencies bundled into one
 file. This allows simple distribution without letting the uses install dependencies.
 
 In Linux and macOS:
@@ -183,7 +183,7 @@ In Linux and macOS:
     python3 -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
-    python -m shiv -c src -o merge_git_repos.pyz .
+    python -m shiv -c src -o concurrent_git_merge.pyz .
 
 In Windows Gitbash:
 
@@ -191,11 +191,11 @@ In Windows Gitbash:
     source venv/Scripts/activate
     pip install -r requirements.txt
     # Parameter -p may differ on your system.
-    python -m shiv -c src -p /c/Programme/Python3/python -o merge_git_repos.pyz .
+    python -m shiv -c src -p /c/Programme/Python3/python -o concurrent_git_merge.pyz .
 
 In Windows CMD:
 
     python -m venv venv
     venv\Scripts\activate.bat
     pip install -r requirements.txt
-    python -m shiv -c src -o merge_git_repos.pyz .
+    python -m shiv -c src -o concurrent_git_merge.pyz .

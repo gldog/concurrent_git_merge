@@ -8,7 +8,7 @@ keep_ours_paths_merge_driver.pyz
 # Me
 eval
 example-scripts/others
-merge_git_repos.pyz
+concurrent_git_merge.pyz
 todo.md
 
 # Shiv

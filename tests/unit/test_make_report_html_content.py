@@ -1,7 +1,7 @@
 import textwrap
 import unittest
 
-from src import merge_git_repos as main
+from src import concurrent_git_merge as main
 
 
 class Test01(unittest.TestCase):

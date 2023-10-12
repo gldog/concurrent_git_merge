@@ -2,11 +2,11 @@
 
 #------------------------------------------------------------------------------------------- 100 --|
 #
-# Post-script for merge_git_repos.py
+# Post-script for concurrent_git_merge.py
 #
 # TODO Description
 #
-# This script is called by merge_git_repos.py using parameter --post-script.
+# This script is called by concurrent_git_merge.py using parameter --post-script.
 
 set -eu
 #set -x
@@ -42,7 +42,7 @@ function extract_pull_request_url() {
 : "${IS_PUSH_AFTER_MERGE:=true}"
 : "${IS_CREATE_PULL_REQUEST_URLS:=true}"
 
-# If merge_git_repos.py is called in Git-Bash, Python thinks it runs in a Windows environment and
+# If concurrent_git_merge.py is called in Git-Bash, Python thinks it runs in a Windows environment and
 # creates Windows-style paths. Make the paths Unix-style-paths.
 export MGR_REPOS_DIR="${MGR_REPOS_DIR//\\//}"
 export MGR_LOGS_DIR="${MGR_LOGS_DIR//\\//}"

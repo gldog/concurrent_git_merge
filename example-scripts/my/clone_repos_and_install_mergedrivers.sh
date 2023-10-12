@@ -2,14 +2,14 @@
 
 #------------------------------------------------------------------------------------------- 100 --|
 #
-# Pre-script for merge_git_repos.py
+# Pre-script for concurrent_git_merge.py
 #
 # This script clones a Git repo if absent and installs custom merge driver(s).
 #
-# This script is called by merge_git_repos.py using parameter --pre-script. It is an example.
-# merge_git_repos.py calls this pre-script for each repo to be merged concurrently.
+# This script is called by concurrent_git_merge.py using parameter --pre-script. It is an example.
+# concurrent_git_merge.py calls this pre-script for each repo to be merged concurrently.
 #
-# While merge_git_repos.py is a general purpose script for merging, this pre-script is specific
+# While concurrent_git_merge.py is a general purpose script for merging, this pre-script is specific
 # for someone's workflow.
 #
 # Using a custom merge driver means in general:
@@ -62,16 +62,16 @@ function on_error() {
 : "${MERGE_DRIVER_MERGE_STRATEGY:='onconflict-ours'}"
 
 # The merge driver executable, set by the overall calling script. This line is also the check if it
-# is set. The merge diver is only used in this pre-script. But it is defined in merge_git_repos.sh
+# is set. The merge diver is only used in this pre-script. But it is defined in concurrent_git_merge.sh
 # to fail-fast in case it is not callable.
 echo ""
 echo "# MERGE_DRIVER_EXECUTABLE: ${MERGE_DRIVER_EXECUTABLE}."
-echo "# Environment-vars exposed by merge_git_repos.py:"
+echo "# Environment-vars exposed by concurrent_git_merge.py:"
 cmd="printenv | sort | grep MGR_"
 echo "\$ $cmd"
 eval "$cmd"
 
-# If merge_git_repos.py is called in Gitbash, Python in fact runs it in a Windows environment and
+# If concurrent_git_merge.py is called in Gitbash, Python in fact runs it in a Windows environment and
 # creates Windows-style paths. Make the paths Unix-style-paths.
 export MGR_REPO_DIR="${MGR_REPO_DIR//\\//}"
 export MGR_REPOS_DIR="${MGR_REPOS_DIR//\\//}"
@@ -83,7 +83,7 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   echo "#   Repo $MGR_REPO_DIR is absent."
 
   # The ref-repo is named as the remote-repo.
-  # MGR_PRJ_AND_REPO_REMOTE_NAME is the value given to merge_git_repos.py in parameter
+  # MGR_PRJ_AND_REPO_REMOTE_NAME is the value given to concurrent_git_merge.py in parameter
   # -r/--repos-data in part 'prj/repo-remote-name'. Get the repo-name.
   REPO_REMOTE_NAME=${MGR_PRJ_AND_REPO_REMOTE_NAME##*/}
   REF_REPO="./referencerepos/${REPO_REMOTE_NAME}.git"
@@ -110,7 +110,8 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   echo "\$ $cmd"
   eval "$cmd"
 else
-  echo "#   Repo $MGR_REPO_DIR is preset."
+  echo ""
+  echo "#   Repo $MGR_REPO_DIR is present."
   echo "#   Fetching all tags."
   cmd="git -C $MGR_REPOS_DIR fetch --tags $REMOTE"
   echo "\$ $cmd"
