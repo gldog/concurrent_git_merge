@@ -72,30 +72,30 @@ def init_argument_parser():
             git clean -fd
             git checkout {dest_branch}
             Create merge branch and checkout, if --merge-branch-template is given.
-            git merge --no-edit {merge_options} {source_branch|merge-branch}
+            git merge --no-edit {merge_options} {source_ref|merge-branch}
             post_script, if given in --post-script"""))
     parser.add_argument('-r', '--repos-data', required=True, nargs='+',
-                        metavar='repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]',
+                        metavar='repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name]',
                         # ---------------------------------------------------------------- 100 -- #
                         help=textwrap.dedent("""\
                         Information about the repos and branches to be processed. They are given as
                         positional parts, delimited by colon ':'.
                           1. 'repo_local_name', mandatory
                               The name of the repo as it exists in the repos-directory.
-                          2. 'source_branch', optional
-                              The branch to be merged into the dest-branch. If omitted it falls
-                              back to -S/--default-source-branch. At least one of the two must be
+                          2. 'source_ref', optional
+                              The branch/tag/commit to be merged into the dest-branch. If omitted it
+                              falls back to -S/--default-source-ref. At least one of the two must be
                               given.
                           3. 'dest_branch', optional
-                              The branch to be updated from the source-branch. If omitted it falls
-                              back to -D/--default-dest-branch. At lest one of the two must be given.
+                              The branch to be updated from the source-ref. If omitted it falls back
+                              to -D/--default-dest-branch. At lest one of the two must be given.
                           4. 'prj/repo_remote_name', optional
                               The remote project- and repo-name. Exposed as environment variable to
                               the script given in --pre-script.
                               The 'prj'-part is the Bitbucket-project or the Github-username or the
                               Gitlab-namespace.
                         The full notation is:
-                                -r repo_local_name:source_branch:dest_branch:prj/repo_remote_name
+                                -r repo_local_name:source_ref:dest_branch:prj/repo_remote_name
                         Optional parts may be empty:
                                 -r repo_local_name:::
                         Delimiters of empty parts can be omitted from right to left. The above
@@ -129,8 +129,8 @@ def init_argument_parser():
                         help="Directory the repos resides.")
     parser.add_argument('-o', '--logs-dir', required=True,
                         help="Logs-directory.")
-    parser.add_argument('-S', '--default-source-branch', default='',
-                        help="Default source branch used for repos without given source-branch.")
+    parser.add_argument('-S', '--default-source-ref', default='',
+                        help="Default source branch used for repos without given source-ref.")
     parser.add_argument('-D', '--default-dest-branch', default='',
                         help="Default destination branch used for repos without given dest-branch.")
     parser.add_argument('-m', '--merge-options', default='',
@@ -152,8 +152,8 @@ def init_argument_parser():
                         and understands the following placeholders:
                           o repo_local_name     From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
-                          o source_branch       From parameter -r/--repos-data the 2nd part
-                                                'source_branch', or the default-source-branch -S if
+                          o source_ref       From parameter -r/--repos-data the 2nd part
+                                                'source_ref', or the default-source-ref -S if
                                                 absent.
                           o dest_branch         From parameter -r/--repos-data the 3rd part
                                                 'dest-branch', or the default-dest-branch -D if
@@ -166,7 +166,7 @@ def init_argument_parser():
                         The task_start is of Python-type 'datetime'. strftime() can be used to
                         generate a pretty-print timestamp. An example to be used in a bash-script:
                             parameters=" --merge-branch-template
-                            parameters+=" merge/from_{{source_branch.replace('origin/','')}}"
+                            parameters+=" merge/from_{{source_ref.replace('origin/','')}}"
                             parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%Y%%m%%d-%%H%%M%%S')}}"
                         The task's timestamps are very close to the one the script was started. But you might
                         prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
@@ -187,8 +187,8 @@ def init_argument_parser():
                         variables exposed:
                           o MGR_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
-                          o MGR_SOURCE_BRANCH   From parameter -r/--repos-data the 2nd part
-                                                'source_branch', or the default-source-branch -S if
+                          o MGR_SOURCE_REF   From parameter -r/--repos-data the 2nd part
+                                                'source_ref', or the default-source-ref -S if
                                                 absent.
                           o MGR_DEST_BRANCH     From parameter -r/--repos-data the 3rd part
                                                 'dest-branch', or the default-dest-branch -D if
@@ -225,7 +225,7 @@ def init_argument_parser():
 def make_repo_metadata(repo_data_from_parameter: str):
     # Spit the parameter repo_data_from_parameter into:
     #   o repo_local_name
-    #   o source_branch
+    #   o source_ref
     #   o dest_branch
     #   o prj/repo_remote_name
     #
@@ -243,9 +243,9 @@ def make_repo_metadata(repo_data_from_parameter: str):
     repo_local_name = parts[0].strip()
     if repo_local_name:
         repo_metadata['repo_local_name'] = repo_local_name
-    source_branch = parts[1].strip()
-    if source_branch:
-        repo_metadata['source_branch'] = source_branch
+    source_ref = parts[1].strip()
+    if source_ref:
+        repo_metadata['source_ref'] = source_ref
     dest_branch = parts[2].strip()
     if dest_branch:
         repo_metadata['dest_branch'] = dest_branch
@@ -256,28 +256,28 @@ def make_repo_metadata(repo_data_from_parameter: str):
     return repo_metadata
 
 
-def make_repos_metadata(repos_data: List[str], default_source_branch: str, default_dest_branch: str):
+def make_repos_metadata(repos_data: List[str], default_source_ref: str, default_dest_branch: str):
     """
     Transform the repos given in command line parameter -r/--repo-names into dict of following format:
 
         [
             {
                 'repo_local_name': 'repo1',
-                'source_branch': 'stable-tag-1',
+                'source_ref': 'stable-tag-1',
                 'dest_branch': 'my-feature-branch',
                 'prj_and_repo_remote_name': 'prj1/repository-with-long-name1',
             },
             ...
         ]
     """
-    default_source_branch = default_source_branch.strip()
+    default_source_ref = default_source_ref.strip()
     default_dest_branch = default_dest_branch.strip()
     repos_metadata = []
     for repo_data in repos_data:
         # repo_data is the value given in parameter -r/--repos-data.
         repo_metadata = make_repo_metadata(repo_data)
-        if 'source_branch' not in repo_metadata:
-            repo_metadata['source_branch'] = default_source_branch
+        if 'source_ref' not in repo_metadata:
+            repo_metadata['source_ref'] = default_source_ref
         if 'dest_branch' not in repo_metadata:
             repo_metadata['dest_branch'] = default_dest_branch
         repos_metadata.append(repo_metadata)
@@ -288,8 +288,8 @@ def validate_repos_metadata(repos_metadata):
     """
     Check for completeness of each repo's metadata.
 
-    Each repo needs a source-branch and a dest-branch. They can be given in parameter -r/--repos-data, or as default
-    in -S/--default-source-branch and -D/--default-dest-branch. But if not given, the merge can't be started. This
+    Each repo needs a source-ref and a dest-branch. They can be given in parameter -r/--repos-data, or as default
+    in -S/--default-source-ref and -D/--default-dest-branch. But if not given, the merge can't be started. This
     is a configuration error.
     """
 
@@ -303,8 +303,8 @@ def validate_repos_metadata(repos_metadata):
             errors.append(f"Missing repo-local-name in repo-data '{repo_data_from_parameter}'")
         else:
             repo_local_names.add(repo_local_name)
-        if not repo_metadata['source_branch']:
-            errors.append(f"Missing source-branch in or for repo-data '{repo_data_from_parameter}'")
+        if not repo_metadata['source_ref']:
+            errors.append(f"Missing source-ref in or for repo-data '{repo_data_from_parameter}'")
         if not repo_metadata['dest_branch']:
             errors.append(f"Missing dest-branch in or for repo-data '{repo_data_from_parameter}'")
         # The 'prj/repo-remote-name' part ist optional.
@@ -352,7 +352,7 @@ def make_mergebranch_name(merge_branch_template, repo_metadata):
     Example:
 
     --merge-branch-template \
-      "maintain/{{source_branch.replace('origin/','')}}_into_{{dest_branch}}_{{task_start.strftime('%b%d')}}"
+      "maintain/{{source_ref.replace('origin/','')}}_into_{{dest_branch}}_{{task_start.strftime('%b%d')}}"
 
     :param merge_branch_template: jinja2-template.
     :param repo_metadata: repo_metadata dict.
@@ -369,7 +369,7 @@ def make_mergebranch_name(merge_branch_template, repo_metadata):
 def execute_merge(repo_metadata):
     task_start_timestamp = datetime.now()
     repo_local_name = repo_metadata['repo_local_name']
-    source_branch = repo_metadata['source_branch']
+    source_ref = repo_metadata['source_ref']
     dest_branch = repo_metadata['dest_branch']
     repo_dir = pathlib.Path(g_cl_args.repos_dir, repo_local_name)
     repo_metadata['task_start'] = task_start_timestamp
@@ -437,7 +437,7 @@ def execute_merge(repo_metadata):
 
         # On merge-conflicts, git merge exists with 1. Ignore this exit code to allow running the post-script regardless
         # of the merge result. But signal that after the post-script has been run.
-        r_merge = run_command(f'git -C {repo_dir} merge --no-edit {g_cl_args.merge_options} {source_branch}',
+        r_merge = run_command(f'git -C {repo_dir} merge --no-edit {g_cl_args.merge_options} {source_ref}',
                               repo_local_name, logfile_name, honor_returncode=False)
 
         if g_cl_args.post_script:
@@ -497,7 +497,7 @@ def make_report_xml_content(repos_metadata):
     line.append('<tr>')
     line.append('<td>repo_local_name</td>')
     line.append('<td>task_finish_status</td>')
-    line.append('<td>source_branch</td>')
+    line.append('<td>source_ref</td>')
     line.append('<td>dest_branch</td>')
     line.append('<td>task_duration</td>')
     line.append('<td>task_finish_details</td>')
@@ -509,7 +509,7 @@ def make_report_xml_content(repos_metadata):
         line.append('<tr>')
         line.append(f'<td>{dict.get(repo_metadata, "repo_local_name", EMPTY_CELL_DEFAULT)}</td>')
         line.append(f'<td>{dict.get(repo_metadata, "task_finish_status", EMPTY_CELL_DEFAULT)}</td>')
-        line.append(f'<td>{dict.get(repo_metadata, "source_branch", EMPTY_CELL_DEFAULT)}</td>')
+        line.append(f'<td>{dict.get(repo_metadata, "source_ref", EMPTY_CELL_DEFAULT)}</td>')
         line.append(f'<td>{dict.get(repo_metadata, "dest_branch", EMPTY_CELL_DEFAULT)}</td>')
         line.append(f'<td>{dict.get(repo_metadata, "task_duration", EMPTY_CELL_DEFAULT)}</td>')
         line.append(f'<td>{dict.get(repo_metadata, "task_finish_details", EMPTY_CELL_DEFAULT)}</td>')
@@ -538,7 +538,7 @@ def main():
 
     g_logger.debug(f"args: {g_cl_args}")
 
-    repos_metadata = make_repos_metadata(g_cl_args.repos_data, g_cl_args.default_source_branch,
+    repos_metadata = make_repos_metadata(g_cl_args.repos_data, g_cl_args.default_source_ref,
                                          g_cl_args.default_dest_branch)
     g_logger.debug(f"repos_metadata: {json.dumps(repos_metadata, default=serialize_datetime_or_propagate)}")
     errors = validate_repos_metadata(repos_metadata)

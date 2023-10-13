@@ -3,11 +3,11 @@
 # Manual
 
     $ python3 ../../src/concurrent_git_merge.py -h
-    usage: concurrent_git_merge.py [-h] -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name]
-                              [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
-                              LOGS_DIR [-S DEFAULT_SOURCE_BRANCH] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
-                              [-t MERGE_BRANCH_TEMPLATE] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [--pre-script PRE_SCRIPT]
-                              [--post-script POST_SCRIPT]
+    usage: concurrent_git_merge.py [-h] -r repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name]
+                                   [repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
+                                   LOGS_DIR [-S DEFAULT_SOURCE_REF] [-D DEFAULT_DEST_BRANCH] [-m MERGE_OPTIONS]
+                                   [-t MERGE_BRANCH_TEMPLATE] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+                                   [--pre-script PRE_SCRIPT] [--post-script POST_SCRIPT]
     
     This script do merges in a list of repos. It was written to handle merges in projects comprising of
     multiple Git repositories but with shared source- and dest-branch names.
@@ -29,30 +29,30 @@
         git clean -fd
         git checkout {dest_branch}
         Create merge branch and checkout, if --merge-branch-template is given.
-        git merge --no-edit {merge_options} {source_branch|merge-branch}
+        git merge --no-edit {merge_options} {source_ref|merge-branch}
         post_script, if given in --post-script
     
     optional arguments:
       -h, --help            show this help message and exit
-      -r repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...], --repos-data repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] [repo_local_name:[source_branch]:[dest_branch]:[prj/repo_remote_name] ...]
+      -r repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name] [repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name] ...], --repos-data repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name] [repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name] ...]
                             Information about the repos and branches to be processed. They are given as
                             positional parts, delimited by colon ':'.
                               1. 'repo_local_name', mandatory
                                   The name of the repo as it exists in the repos-directory.
-                              2. 'source_branch', optional
-                                  The branch to be merged into the dest-branch. If omitted it falls
-                                  back to -S/--default-source-branch. At least one of the two must be
+                              2. 'source_ref', optional
+                                  The branch/tag/commit to be merged into the dest-branch. If omitted it
+                                  falls back to -S/--default-source-ref. At least one of the two must be
                                   given.
                               3. 'dest_branch', optional
-                                  The branch to be updated from the source-branch. If omitted it falls
-                                  back to -D/--default-dest-branch. At lest one of the two must be given.
+                                  The branch to be updated from the source-ref. If omitted it falls back
+                                  to -D/--default-dest-branch. At lest one of the two must be given.
                               4. 'prj/repo_remote_name', optional
                                   The remote project- and repo-name. Exposed as environment variable to
                                   the script given in --pre-script.
                                   The 'prj'-part is the Bitbucket-project or the Github-username or the
                                   Gitlab-namespace.
                             The full notation is:
-                                    -r repo_local_name:source_branch:dest_branch:prj/repo_remote_name
+                                    -r repo_local_name:source_ref:dest_branch:prj/repo_remote_name
                             Optional parts may be empty:
                                     -r repo_local_name:::
                             Delimiters of empty parts can be omitted from right to left. The above
@@ -86,8 +86,8 @@
                             Directory the repos resides.
       -o LOGS_DIR, --logs-dir LOGS_DIR
                             Logs-directory.
-      -S DEFAULT_SOURCE_BRANCH, --default-source-branch DEFAULT_SOURCE_BRANCH
-                            Default source branch used for repos without given source-branch.
+      -S DEFAULT_SOURCE_REF, --default-source-ref DEFAULT_SOURCE_REF
+                            Default source branch used for repos without given source-ref.
       -D DEFAULT_DEST_BRANCH, --default-dest-branch DEFAULT_DEST_BRANCH
                             Default destination branch used for repos without given dest-branch.
       -m MERGE_OPTIONS, --merge-options MERGE_OPTIONS
@@ -107,8 +107,8 @@
                             and understands the following placeholders:
                               o repo_local_name     From parameter -r/--repos-data the 1st part
                                                     'repo_local_name'.
-                              o source_branch       From parameter -r/--repos-data the 2nd part
-                                                    'source_branch', or the default-source-branch -S if
+                              o source_ref       From parameter -r/--repos-data the 2nd part
+                                                    'source_ref', or the default-source-ref -S if
                                                     absent.
                               o dest_branch         From parameter -r/--repos-data the 3rd part
                                                     'dest-branch', or the default-dest-branch -D if
@@ -121,7 +121,7 @@
                             The task_start is of Python-type 'datetime'. strftime() can be used to
                             generate a pretty-print timestamp. An example to be used in a bash-script:
                                 parameters=" --merge-branch-template
-                                parameters+=" merge/from_{{source_branch.replace('origin/','')}}"
+                                parameters+=" merge/from_{{source_ref.replace('origin/','')}}"
                                 parameters+="_into_{{dest_branch}}_{{task_start.strftime('%Y%m%d-%H%M%S')}}"
                             The task's timestamps are very close to the one the script was started. But you might
                             prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
@@ -141,8 +141,8 @@
                             variables exposed:
                               o MGR_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                     'repo_local_name'.
-                              o MGR_SOURCE_BRANCH   From parameter -r/--repos-data the 2nd part
-                                                    'source_branch', or the default-source-branch -S if
+                              o MGR_SOURCE_REF   From parameter -r/--repos-data the 2nd part
+                                                    'source_ref', or the default-source-ref -S if
                                                     absent.
                               o MGR_DEST_BRANCH     From parameter -r/--repos-data the 3rd part
                                                     'dest-branch', or the default-dest-branch -D if

@@ -3,7 +3,7 @@ Merge Use Cases
 
 # General
 
-* The terms `SOURCE_BRANCH` and `DEST_BRANCH` are from the merge-script point of view.
+* The terms `SOURCE_REF` and `DEST_BRANCH` are from the merge-script point of view.
 * The terms `A` (ancestor commit), `ours` and `theirs` are from a merge driver point of view.
 * The terms `Parent` and `Child` means branches (not commits).
 * The term `M` describes a merge commit.
@@ -18,7 +18,7 @@ The merge driver [keep_ours_paths_merge_driver](https://github.com/gldog/keep_ou
 
 Direkt merge from parent branch to child branch.
 
-     A   SOURCE_BRANCH
+     A   SOURCE_REF
     -*------*------------*---------  Parent (theirs)
       \                  |
        \           merge ↓
@@ -37,7 +37,7 @@ Direkt merge from parent branch to child branch.
 
 First the child branch is updated, then a pull request is created from child to parent.
 
-     A   SOURCE_BRANCH
+     A   SOURCE_REF
     -*------*------------*---------  Parent (theirs)
       \                  |   ↑
        \                 |   | PR
@@ -64,7 +64,7 @@ Merge conflicts are resolved on the merge-branch before creating the pull reques
 The merge is decoupled by using a pull request.
 You can have a look what will be integrated into the child branch.
 
-     A   SOURCE_BRANCH
+     A   SOURCE_REF
     -*------*------------*---------  Parent (theirs)
       \            merge ↓
        \         --------*---------  merge (ours)
@@ -89,7 +89,7 @@ Direkt merge from child branch to parent branch.
        \                 |
         \                |
          *----*----------*---------  Child (theirs)
-         SOURCE_BRANCH 
+         SOURCE_REF 
 
 * Pre-script: Clone or update the repo, install merge driver with merge strategy `always-ours`.
 * Merge driver: The merge driver protects versions on the parent branch using merge strategy `always-ours`.
@@ -110,7 +110,7 @@ Merge conflicts are resolved on the merge-branch before creating the pull reques
        \       ----------*---------  merge (ours)
         \          merge ↑
          *----*----------*---------  Child (theirs)
-         SOURCE_BRANCH
+         SOURCE_REF
 
 * Pre-script: Clone or update the repo, install merge driver with merge strategy `always-ours`.
 * Merge driver: The merge driver protects versions on the parent branch using merge strategy `always-ours`.

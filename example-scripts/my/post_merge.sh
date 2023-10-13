@@ -31,7 +31,7 @@ echo ""
 echo "# MGR_REPOS_DIR                 $MGR_REPOS_DIR"
 echo "# MGR_LOGS_DIR:                 $MGR_LOGS_DIR"
 echo "# MGR_REPO_DIR                  $MGR_REPO_DIR"
-echo "# MGR_SOURCE_BRANCH:            $MGR_SOURCE_BRANCH"
+echo "# MGR_SOURCE_REF:               $MGR_SOURCE_REF"
 echo "# MGR_DEST_BRANCH               $MGR_DEST_BRANCH"
 echo "# IS_PUSH_AFTER_MERGE:          $IS_PUSH_AFTER_MERGE"
 echo "# IS_CREATE_PULL_REQUEST_URLS:  $IS_CREATE_PULL_REQUEST_URLS"
@@ -98,7 +98,7 @@ fi
 echo ""
 if [[ "$IS_CREATE_PULL_REQUEST_URLS" == true ]]; then
   # If command "git push" has pushed at least one commit, it prints a message (returned from a
-  # server's hook) containing a pull request URL with the source branch already set to the current
+  # server's hook) containing a pull request URL with the source-ref already set to the current
   # branch).
   if [[ "$IS_PUSH_AFTER_MERGE" != true ]]; then
     echo "ERROR: IS_CREATE_PULL_REQUEST_URLS is true but IS_PUSH_AFTER_MERGE isn't." \
@@ -116,7 +116,7 @@ if [[ "$IS_CREATE_PULL_REQUEST_URLS" == true ]]; then
     echo "No pull request URL in output of 'git push'. Exit post-script."
     exit 0
   else
-    # The source-branch or -tag is already part of the URL. Encode the dest-branch and append it.
+    # The source-ref is already part of the URL. Encode the dest-branch and append it.
     # It seems encoding the URL is not neeeded.
     #dest_branch_name_encoded="${MGR_DEST_BRANCH//\//%2F}"
     #pr_url="$pr_url&targetBranch=refs%2Fheads%2F$dest_branch_name_encoded"

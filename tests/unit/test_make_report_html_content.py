@@ -12,7 +12,7 @@ class Test01(unittest.TestCase):
                 "repo_data_from_parameter": "repo1:::prj1/repository1",
                 "repo_local_name": "repo1",
                 "prj_and_repo_remote_name": "prj1/repository1",
-                "source_branch": "origin/master",
+                "source_ref": "origin/master",
                 "dest_branch": "my-feature",
                 "task_start": "2023-01-01T08:00:00.000000",
                 "repo_dir": "repos/repo1",
@@ -26,7 +26,7 @@ class Test01(unittest.TestCase):
                 "repo_data_from_parameter": "repo2",
                 "repo_local_name": "repo2",
                 "prj_and_repo_remote_name": "",
-                "source_branch": "origin/master",
+                "source_ref": "origin/master",
                 "dest_branch": "my-feature",
                 "task_start": "2023-01-01T08:00:01.000000",
                 "repo_dir": "repos/repo1",
@@ -42,7 +42,7 @@ class Test01(unittest.TestCase):
 
         exprected_report_xml = textwrap.dedent("""\
         <table>
-        <tr><td>repo_local_name</td><td>task_finish_status</td><td>source_branch</td><td>dest_branch</td><td>task_duration</td><td>task_finish_details</td></tr>
+        <tr><td>repo_local_name</td><td>task_finish_status</td><td>source_ref</td><td>dest_branch</td><td>task_duration</td><td>task_finish_details</td></tr>
         <tr><td>repo1</td><td>successfully</td><td>origin/master</td><td>my-feature</td><td>0:00:11.000000</td><td></td></tr>
         <tr><td>repo2</td><td>with error</td><td>origin/master</td><td>my-feature</td><td>0:00:08.000000</td><td>This is the error-message</td></tr>
         </table>""")

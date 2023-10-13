@@ -15,19 +15,19 @@ set -u
 #   - The post-script post_merge.sh, called per repo.
 #       Logs commit-diff, pushes merge commit, creates pull request URL
 #
-#   Examples for source branches, demonstrated with with COMMON_SOURCE_BRANCH:
+#   Examples for source branches, demonstrated with with COMMON_SOURCE_REF:
 #
 #   # The source branch is a branch, not a tag. The branch exists as remote branch in the clone,
 #   but might not exist as local branch yet:
 #   REMOTE="origin"
-#   COMMON_SOURCE_BRANCH=${REMOTE}/release/2.0
+#   COMMON_SOURCE_REF=${REMOTE}/release/2.0
 #
 #   # The source branch is a branch, not a tag. The branch does definitely exist as local branch:
-#   COMMON_SOURCE_BRANCH=release/2.0
+#   COMMON_SOURCE_REF=release/2.0
 #
 #   # The source branch is a tag. Tags are present after git clone or git fetch, the remote is not
 #   # needed.
-#   COMMON_SOURCE_BRANCH=stable-build-4
+#   COMMON_SOURCE_REF=stable-build-4
 #
 #
 # Default remote. Might be use here, and is used in pre-script.
@@ -35,11 +35,13 @@ set -u
 export REMOTE
 #
 # Example of merge from parent branch to child branch ("DOWN" merge)
-COMMON_SOURCE_BRANCH="${REMOTE}/parentbranch_packagejson_version_changed"
+#COMMON_SOURCE_REF="${REMOTE}/parentbranch_packagejson_version_changed"
+COMMON_SOURCE_REF="fbfb7026096fdcff7ccd0aab31cd1834fd062d56"
+# fbfb7026096fdcff7ccd0aab31cd1834fd062d56
 COMMON_DEST_BRANCH="childbranch_packagejson_version_changed"
 #
 # Example of merge from child branch to parent branch ("UP" merge)
-#COMMON_SOURCE_BRANCH="$REMOTE/team/AS/release/23.11"
+#COMMON_SOURCE_REF="$REMOTE/team/AS/release/23.11"
 #COMMON_DEST_BRANCH="release/23.11.0"
 #
 #
@@ -85,7 +87,7 @@ export IS_CREATE_PULL_REQUEST_URLS
 # So the concurrent_git_merge.py has to create the merge-branch name (if either source- or dest-branch, or
 # both, should be part of the name).
 MERGE_BRANCH_TEMPLATE="merge/"
-MERGE_BRANCH_TEMPLATE+="{{source_branch.replace('origin/','').replace('/', '_')}}"
+MERGE_BRANCH_TEMPLATE+="{{source_ref.replace('origin/','').replace('/', '_')}}"
 MERGE_BRANCH_TEMPLATE+="_into_"
 MERGE_BRANCH_TEMPLATE+="{{dest_branch.replace('/', '_')}}"
 MERGE_BRANCH_TEMPLATE+="_$DATE_STRING_FOR_MERGE_BRANCH"
@@ -129,12 +131,12 @@ fi
 #   positional parts, delimited by colon ':'.
 #     1. 'repo_local_name', mandatory
 #       The name of the repo as it exists in the repos-directory.
-#     2. 'source_branch', optional
+#     2. 'source_ref', optional
 #       The branch to be merged into the dest-branch. If omitted it falls
-#       back to -S/--default-source-branch. At least one of the two must be
+#       back to -S/--default-source-ref. At least one of the two must be
 #       given.
 #     3. 'dest_branch', optional
-#       The branch to be updated from the source-branch. If omitted it falls
+#       The branch to be updated from the source-ref. If omitted it falls
 #       back to -D/--default-dest-branch. At lest one of the two must be given.
 #     4. 'prj/repo_remote_name', optional
 #       The remote project- and repo-name. Exposed as environment variable to
@@ -155,8 +157,8 @@ fi
 #../../concurrent_git_merge.pyz \
 python ../../src/concurrent_git_merge.py \
   --repos-data \
-  mdtr:$COMMON_SOURCE_BRANCH:$COMMON_DEST_BRANCH:jheger/mergedriver-testrepo \
-  --default-source-branch "$COMMON_SOURCE_BRANCH" \
+  mdtr:$COMMON_SOURCE_REF:$COMMON_DEST_BRANCH:jheger/mergedriver-testrepo \
+  --default-source-ref "$COMMON_SOURCE_REF" \
   --default-dest-branch "$COMMON_DEST_BRANCH" \
   --merge-branch-template "$MERGE_BRANCH_TEMPLATE" \
   --merge-options "--no-ff -Xrenormalize -Xignore-space-at-eol" \
@@ -166,20 +168,19 @@ python ../../src/concurrent_git_merge.py \
   --pre-script "bash -c clone_repos_and_install_mergedrivers.sh" \
   --post-script "bash -c post_merge.sh"
 
+exit_code=$?
+
 # Start logging all output to console and logfile.
 # out.log is defined by concurrent_git_merge.py.
-exec > >(tee -a "${LOGS_DIR}/out.log") 2>&1
+#exec > >(tee -a "${LOGS_DIR}/out.log") 2>&1
 
 echo ""
-exit_code=$?
 if [[ $exit_code != 0 ]]; then
   echo "ERROR: $0 finished with exit code $exit_code. Look at the logs."
   exit $exit_code
 else
   echo "$0 finished with exit code 0."
 fi
-
-#    corina-angular-apps-release:$CORINA_ANGULAR_APPS_SOURCE_BRANCH::REL/corina-angular-apps-release \
 
 #
 # Handle pull requests.
