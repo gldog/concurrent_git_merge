@@ -17,27 +17,6 @@ function on_error() {
   echo "$0 for repo $MGR_REPO_DIR exited with FAILURE."
 }
 
-function extract_pull_request_url() {
-  local push_output="$1"
-  local dest_branch_name="$2"
-
-  # The source-branch is already part of the URL.
-  pr_url=$(echo "$push_output" | grep -E "remote: +http" | sed -E 's/remote: +//')
-  if [[ -z "$pr_url" ]]; then
-    echo ""
-    return
-  fi
-
-  dest_branch_name_encoded="${dest_branch_name//\//%2F}"
-  pr_url="$pr_url&targetBranch=refs%2Fheads%2F$dest_branch_name_encoded"
-
-  echo "$pr_url"
-}
-
-#
-# M A I N
-#
-
 # For testing it could be useful to not push the merge-commit or the merge-branch.
 : "${IS_PUSH_AFTER_MERGE:=true}"
 : "${IS_CREATE_PULL_REQUEST_URLS:=true}"
@@ -66,28 +45,6 @@ cmd="git -C $MGR_REPO_DIR status"
 echo "\$ $cmd"
 eval "$cmd"
 
-# List of commits comprising a pull request.
-# The option "--topo-order" sorts the commits as Bitbucket displays them in the pull request commits
-# list. "HEAD" is the current branch, which is the merge branch.
-# The dest branch is configured in the merge script. If the parent branch or the child branch
-# is the dest branch is not of interest here.
-echo ""
-echo "# Calculating commit-diff of ${MGR_DEST_BRANCH} and HEAD." \
-  "This can be done and is done regardless of the merge result."
-
-echo "# Commit-diff count of ${MGR_DEST_BRANCH} and HEAD:"
-cmd="git -C $MGR_REPO_DIR log HEAD..${MGR_SOURCE_BRANCH} --oneline --topo-order | wc -l"
-echo "\$ $cmd"
-git_commit_diff_count=$(eval "$cmd")
-echo "$git_commit_diff_count"
-echo ""
-
-echo "# Commt-diff of ${MGR_DEST_BRANCH} and HEAD:"
-cmd="git -C $MGR_REPO_DIR log HEAD..${MGR_SOURCE_BRANCH} --oneline --topo-order"
-echo "\$ $cmd"
-eval "$cmd"
-echo ""
-
 # In a clean workspace the following command prints nothing than a newline.
 echo "# Check for merge conflict."
 cmd="git -C $MGR_REPO_DIR status --porcelain"
@@ -103,12 +60,7 @@ fi
 echo ""
 echo "# No merge conflict."
 
-# Note, macOS wc pads the output with spaces. Make a number comparison, not a string comparison!
-if ((git_commit_diff_count == 0)); then
-  echo "# No commit-diff. Exit post-script."
-  exit 0
-fi
-
+echo ""
 echo "# The merge-commit is:"
 cmd="git -C $MGR_REPO_DIR log -1"
 echo "\$ $cmd"
