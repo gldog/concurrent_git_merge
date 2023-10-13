@@ -113,7 +113,7 @@ else
   echo ""
   echo "#   Repo $MGR_REPO_DIR is present."
   echo "#   Fetching all tags."
-  cmd="git -C $MGR_REPOS_DIR fetch --tags $REMOTE"
+  cmd="git -C $MGR_REPO_DIR fetch --tags $REMOTE"
   echo "\$ $cmd"
   eval "$cmd"
 fi

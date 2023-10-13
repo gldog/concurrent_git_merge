@@ -76,14 +76,14 @@ echo "# Calculating commit-diff of ${MGR_DEST_BRANCH} and HEAD." \
   "This can be done and is done regardless of the merge result."
 
 echo "# Commit-diff count of ${MGR_DEST_BRANCH} and HEAD:"
-cmd="git -C $MGR_REPO_DIR log ${MGR_DEST_BRANCH}..HEAD --oneline --topo-order | wc -l"
+cmd="git -C $MGR_REPO_DIR log HEAD..${MGR_SOURCE_BRANCH} --oneline --topo-order | wc -l"
 echo "\$ $cmd"
 git_commit_diff_count=$(eval "$cmd")
 echo "$git_commit_diff_count"
 echo ""
 
 echo "# Commt-diff of ${MGR_DEST_BRANCH} and HEAD:"
-cmd="git -C $MGR_REPO_DIR log ${MGR_DEST_BRANCH}..HEAD --oneline --topo-order"
+cmd="git -C $MGR_REPO_DIR log HEAD..${MGR_SOURCE_BRANCH} --oneline --topo-order"
 echo "\$ $cmd"
 eval "$cmd"
 echo ""
