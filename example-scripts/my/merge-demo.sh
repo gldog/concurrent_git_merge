@@ -60,7 +60,6 @@ COMMON_DEST_BRANCH="childbranch_packagejson_version_changed"
 #export MERGE_DRIVER_MERGE_STRATEGY="always-ours"
 #
 
-
 # Used in pre-script, defaults to https://github.com.
 export BASE_URL="https://bitbucket.org"
 REPOS_DIR="./repos"
@@ -167,6 +166,10 @@ python ../../src/concurrent_git_merge.py \
   --pre-script "bash -c clone_repos_and_install_mergedrivers.sh" \
   --post-script "bash -c post_merge.sh"
 
+# Start logging all output to console and logfile.
+# out.log is defined by concurrent_git_merge.py.
+exec > >(tee -a "${LOGS_DIR}/out.log") 2>&1
+
 echo ""
 exit_code=$?
 if [[ $exit_code != 0 ]]; then
@@ -196,10 +199,10 @@ if [[ "$IS_CREATE_PULL_REQUEST_URLS" == true ]]; then
     read -r -d '' footer <<EOF
 Create Pull-Requests separately:
 Each instance of --post-script created a pull-request-URL in case there was a commit-diff to be
-pushed to the remote. The pull request URL is appended to the common file '$PULL_REQUEST_URLS_FILE'.
+pushed to the remote. The pull request URL was appended to the common file '$PULL_REQUEST_URLS_FILE'.
 You can create all pull-requests at once calling one of the following commands.
-  - In cmd.exe or Git-Bash:  cat $PULL_REQUEST_URLS_FILE | xargs -t -I{} bash -c "start '{}' ; sleep 0.5"
-  - Otherwise:               cat $PULL_REQUEST_URLS_FILE | xargs -t -I{} bash -c "open '{}' ; sleep 0.5"
+  - In Gitbash or cmd.exe:  cat $PULL_REQUEST_URLS_FILE | xargs -t -I{} bash -c "start '{}' ; sleep 0.5"
+  - Otherwise:              cat $PULL_REQUEST_URLS_FILE | xargs -t -I{} bash -c "open '{}' ; sleep 0.5"
 If 'open' doesn't work in your Linux, try 'xdg-open' or 'browse'.
 EOF
     set -e
