@@ -14,7 +14,7 @@ set -eu
 trap on_error ERR
 
 function on_error() {
-  echo "$0 for repo $MGR_REPO_DIR exited with FAILURE."
+  echo "$0 for repo $CGM_REPO_DIR exited with FAILURE."
 }
 
 # For testing it could be useful to not push the merge-commit or the merge-branch.
@@ -23,31 +23,31 @@ function on_error() {
 
 # If concurrent_git_merge.py is called in Git-Bash, Python thinks it runs in a Windows environment and
 # creates Windows-style paths. Make the paths Unix-style-paths.
-export MGR_REPOS_DIR="${MGR_REPOS_DIR//\\//}"
-export MGR_LOGS_DIR="${MGR_LOGS_DIR//\\//}"
-export MGR_REPO_DIR="${MGR_REPO_DIR//\\//}"
+export CGM_REPOS_DIR="${CGM_REPOS_DIR//\\//}"
+export CGM_LOGS_DIR="${CGM_LOGS_DIR//\\//}"
+export CGM_REPO_DIR="${CGM_REPO_DIR//\\//}"
 
 echo ""
-echo "# MGR_REPOS_DIR                 $MGR_REPOS_DIR"
-echo "# MGR_LOGS_DIR:                 $MGR_LOGS_DIR"
-echo "# MGR_REPO_DIR                  $MGR_REPO_DIR"
-echo "# MGR_SOURCE_REF:               $MGR_SOURCE_REF"
-echo "# MGR_DEST_BRANCH               $MGR_DEST_BRANCH"
+echo "# CGM_REPOS_DIR                 $CGM_REPOS_DIR"
+echo "# CGM_LOGS_DIR:                 $CGM_LOGS_DIR"
+echo "# CGM_REPO_DIR                  $CGM_REPO_DIR"
+echo "# CGM_SOURCE_REF:               $CGM_SOURCE_REF"
+echo "# CGM_DEST_BRANCH               $CGM_DEST_BRANCH"
 echo "# IS_PUSH_AFTER_MERGE:          $IS_PUSH_AFTER_MERGE"
 echo "# IS_CREATE_PULL_REQUEST_URLS:  $IS_CREATE_PULL_REQUEST_URLS"
 
-PULL_REQUEST_URLS_FILE="$MGR_LOGS_DIR/pull-request-urls.txt"
+PULL_REQUEST_URLS_FILE="$CGM_LOGS_DIR/pull-request-urls.txt"
 
 echo "# PULL_REQUEST_URLS_FILE:       $PULL_REQUEST_URLS_FILE"
 
 echo ""
-cmd="git -C $MGR_REPO_DIR status"
+cmd="git -C $CGM_REPO_DIR status"
 echo "\$ $cmd"
 eval "$cmd"
 
 # In a clean workspace the following command prints nothing than a newline.
 echo "# Check for merge conflict."
-cmd="git -C $MGR_REPO_DIR status --porcelain"
+cmd="git -C $CGM_REPO_DIR status --porcelain"
 echo "\$ $cmd"
 git_status_output=$(eval "$cmd")
 echo "$git_status_output"
@@ -62,7 +62,7 @@ echo "# No merge conflict."
 
 echo ""
 echo "# The merge-commit is:"
-cmd="git -C $MGR_REPO_DIR log -1"
+cmd="git -C $CGM_REPO_DIR log -1"
 echo "\$ $cmd"
 eval "$cmd"
 
@@ -71,7 +71,7 @@ if [[ $IS_PUSH_AFTER_MERGE == true ]]; then
   # Using HEAD we don't have to know the concrete current branch name.
   # If there is at least one commit to push, the server's response message contain a pull-request URL.
   echo "# There was something to merge and the merge finished without conflict. Push the current branch."
-  cmd="git -C $MGR_REPO_DIR push --set-upstream origin HEAD"
+  cmd="git -C $CGM_REPO_DIR push --set-upstream origin HEAD"
   echo "\$ $cmd"
   # Output of 'git push':
   # The lines 1-6 are printed to stderr. Lline 7 is printed ot stdout.
@@ -118,9 +118,9 @@ if [[ "$IS_CREATE_PULL_REQUEST_URLS" == true ]]; then
   else
     # The source-ref is already part of the URL. Encode the dest-branch and append it.
     # It seems encoding the URL is not neeeded.
-    #dest_branch_name_encoded="${MGR_DEST_BRANCH//\//%2F}"
+    #dest_branch_name_encoded="${CGM_DEST_BRANCH//\//%2F}"
     #pr_url="$pr_url&targetBranch=refs%2Fheads%2F$dest_branch_name_encoded"
-    pr_url="$pr_url&targetBranch=refs/heads/$MGR_DEST_BRANCH"
+    pr_url="$pr_url&targetBranch=refs/heads/$CGM_DEST_BRANCH"
     echo "$pr_url" >>"$PULL_REQUEST_URLS_FILE"
   fi
 fi

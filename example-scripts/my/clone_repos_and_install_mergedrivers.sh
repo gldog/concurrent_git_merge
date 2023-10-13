@@ -46,7 +46,7 @@ set -eu
 trap on_error ERR
 
 function on_error() {
-  echo "Pre-script for repo $MGR_REPO_DIR exited with FAILURE."
+  echo "Pre-script for repo $CGM_REPO_DIR exited with FAILURE."
 }
 
 # Defaults to github.com if unset.
@@ -67,25 +67,25 @@ function on_error() {
 echo ""
 echo "# MERGE_DRIVER_EXECUTABLE: ${MERGE_DRIVER_EXECUTABLE}."
 echo "# Environment-vars exposed by concurrent_git_merge.py:"
-cmd="printenv | sort | grep MGR_"
+cmd="printenv | sort | grep CGM_"
 echo "\$ $cmd"
 eval "$cmd"
 
 # If concurrent_git_merge.py is called in Gitbash, Python in fact runs it in a Windows environment and
 # creates Windows-style paths. Make the paths Unix-style-paths.
-export MGR_REPO_DIR="${MGR_REPO_DIR//\\//}"
-export MGR_REPOS_DIR="${MGR_REPOS_DIR//\\//}"
-export MGR_LOGS_DIR="${MGR_LOGS_DIR//\\//}"
+export CGM_REPO_DIR="${CGM_REPO_DIR//\\//}"
+export CGM_REPOS_DIR="${CGM_REPOS_DIR//\\//}"
+export CGM_LOGS_DIR="${CGM_LOGS_DIR//\\//}"
 
 echo ""
-echo "# Cloning the repo $MGR_REPO_DIR if absent."
-if [[ ! -d "$MGR_REPO_DIR" ]]; then
-  echo "#   Repo $MGR_REPO_DIR is absent."
+echo "# Cloning the repo $CGM_REPO_DIR if absent."
+if [[ ! -d "$CGM_REPO_DIR" ]]; then
+  echo "#   Repo $CGM_REPO_DIR is absent."
 
   # The ref-repo is named as the remote-repo.
-  # MGR_PRJ_AND_REPO_REMOTE_NAME is the value given to concurrent_git_merge.py in parameter
+  # CGM_PRJ_AND_REPO_REMOTE_NAME is the value given to concurrent_git_merge.py in parameter
   # -r/--repos-data in part 'prj/repo-remote-name'. Get the repo-name.
-  REPO_REMOTE_NAME=${MGR_PRJ_AND_REPO_REMOTE_NAME##*/}
+  REPO_REMOTE_NAME=${CGM_PRJ_AND_REPO_REMOTE_NAME##*/}
   REF_REPO="./referencerepos/${REPO_REMOTE_NAME}.git"
 
   # git clone shall use a reference-repo if present.
@@ -98,8 +98,8 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   #
   # Git clones all tags per default, and has the option --no-tags to not clone them. But surprisingly
   # using --not-tags is slower. So don't use this option.
-  cmd="git -C $MGR_REPOS_DIR clone --branch $MGR_DEST_BRANCH"
-  cmd+=" ${BASE_URL}/${MGR_PRJ_AND_REPO_REMOTE_NAME}.git $MGR_REPO_LOCAL_NAME"
+  cmd="git -C $CGM_REPOS_DIR clone --branch $CGM_DEST_BRANCH"
+  cmd+=" ${BASE_URL}/${CGM_PRJ_AND_REPO_REMOTE_NAME}.git $CGM_REPO_LOCAL_NAME"
   echo "#   Use reference-repo if present."
   if [[ -d "$REF_REPO" ]]; then
     echo "#   Found reference-repo $REF_REPO, using option --reference."
@@ -111,9 +111,9 @@ if [[ ! -d "$MGR_REPO_DIR" ]]; then
   eval "$cmd"
 else
   echo ""
-  echo "#   Repo $MGR_REPO_DIR is present."
+  echo "#   Repo $CGM_REPO_DIR is present."
   echo "#   Fetching all tags."
-  cmd="git -C $MGR_REPO_DIR fetch --tags $REMOTE"
+  cmd="git -C $CGM_REPO_DIR fetch --tags $REMOTE"
   echo "\$ $cmd"
   eval "$cmd"
 fi
@@ -123,7 +123,7 @@ fi
 echo ""
 echo "# Defining the merge drivers."
 echo "#   Defining the XML Maven merge driver:"
-cmd="git -C $MGR_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
+cmd="git -C $CGM_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
 cmd+=" '"
 cmd+="$MERGE_DRIVER_EXECUTABLE -O %O -A %A -B %B -P ./%P"
 cmd+=" -p ${MERGE_DRIVER_MERGE_STRATEGY}:./version"
@@ -135,7 +135,7 @@ echo "\$ $cmd"
 eval "$cmd"
 
 echo "#   Defining the JSON NPM merge driver:"
-cmd="git -C $MGR_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-merge-driver.driver"
+cmd="git -C $CGM_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-merge-driver.driver"
 cmd+=" '"
 cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P"
 cmd+=" -p ${MERGE_DRIVER_MERGE_STRATEGY}:version"
@@ -148,7 +148,7 @@ eval "$cmd"
 # is true and the setting is absent in .git/info/attributes.
 echo ""
 if [[ $IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES == true ]]; then
-  ATTRIBUTES_FILE="$MGR_REPO_DIR/.git/info/attributes"
+  ATTRIBUTES_FILE="$CGM_REPO_DIR/.git/info/attributes"
   echo "# IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES is true." \
     "Registering merge drivers in $ATTRIBUTES_FILE if not yet registered."
   MAVEN_POM_REGISTRATION="pom.xml merge=maven-pomxml-keep-ours-xpath-merge-driver"
@@ -178,4 +178,4 @@ if [[ $IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES == true ]]; then
   fi
 fi
 
-echo "# Pre-script $0 called for repo $MGR_REPO_DIR finished."
+echo "# Pre-script $0 called for repo $CGM_REPO_DIR finished."

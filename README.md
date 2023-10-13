@@ -136,30 +136,30 @@
                             This script is executed at the begin of each repo's merge-task. Here you can
                             clone the repos, install merge-drivers, and others. This script doesn't run
                             in the repo's directory. Therefore the Git-command must be given with 
-                            '-C $MGR_REPO_DIR', or you have to change to the repo's directory in the
+                            '-C $CGM_REPO_DIR', or you have to change to the repo's directory in the
                             script. This script runs in an environment with repo-specific environment
                             variables exposed:
-                              o MGR_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
+                              o CGM_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                     'repo_local_name'.
-                              o MGR_SOURCE_REF   From parameter -r/--repos-data the 2nd part
+                              o CGM_SOURCE_REF   From parameter -r/--repos-data the 2nd part
                                                     'source_ref', or the default-source-ref -S if
                                                     absent.
-                              o MGR_DEST_BRANCH     From parameter -r/--repos-data the 3rd part
+                              o CGM_DEST_BRANCH     From parameter -r/--repos-data the 3rd part
                                                     'dest-branch', or the default-dest-branch -D if
                                                     absent.
-                              o MGR_PRJ_AND_REPO_REMOTE_NAME    From parameter -r/--repos-data the 4th
+                              o CGM_PRJ_AND_REPO_REMOTE_NAME    From parameter -r/--repos-data the 4th
                                                     part 'prj/repo-remote-name'.
-                              o MGR_REPO_DATA_FROM_PARAMETER    From parameter -r/--repos-data the
+                              o CGM_REPO_DATA_FROM_PARAMETER    From parameter -r/--repos-data the
                                                     complete string.
-                              o MGR_TASK_START      The timestamp the repo's task has been started.
-                              o MGR_MERGE_BRANCH    From parameter -m/--merge-branch-template if given,
+                              o CGM_TASK_START      The timestamp the repo's task has been started.
+                              o CGM_MERGE_BRANCH    From parameter -m/--merge-branch-template if given,
                                                     with placeholders replaced.
-                              o MGR_REPO_DIR        'repo_local_name' part of parameter -r/--repos-data,
+                              o CGM_REPO_DIR        'repo_local_name' part of parameter -r/--repos-data,
                                                     prefixed with parameter -d.
-                              o MGR_REPOS_DIR       From parameter -d/--repos-dir.
-                              o MGR_LOGS_DIR        From parameter -o/--logs-dir.
-                            For cloning you'll use MGR_REPOS_DIR, and for commands inside a repo you'll
-                            use MGR_REPO_DIR.
+                              o CGM_REPOS_DIR       From parameter -d/--repos-dir.
+                              o CGM_LOGS_DIR        From parameter -o/--logs-dir.
+                            For cloning you'll use CGM_REPOS_DIR, and for commands inside a repo you'll
+                            use CGM_REPO_DIR.
                             On Windows and Gitbash you should call the script with 'bash -c your-script.sh'
                             Otherwise it could be Windows opens it with the default-application, e.g. a
                             text editor.
