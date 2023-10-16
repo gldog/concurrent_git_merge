@@ -33,16 +33,8 @@ set -u
 # Default remote. Might be use here, and is used in pre-script.
 : "${REMOTE=origin}"
 export REMOTE
-#
-# Example of merge from parent branch to child branch ("DOWN" merge)
-#COMMON_SOURCE_REF="${REMOTE}/parentbranch_packagejson_version_changed"
-COMMON_SOURCE_REF="fbfb7026096fdcff7ccd0aab31cd1834fd062d56"
-# fbfb7026096fdcff7ccd0aab31cd1834fd062d56
-COMMON_DEST_BRANCH="childbranch_packagejson_version_changed"
-#
-# Example of merge from child branch to parent branch ("UP" merge)
-#COMMON_SOURCE_REF="$REMOTE/team/AS/release/23.11"
-#COMMON_DEST_BRANCH="release/23.11.0"
+export COMMON_SOURCE_REF="${REMOTE}/childbranch_packagejson_version_changed"
+export COMMON_DEST_BRANCH="parentbranch_packagejson_version_changed"
 #
 #
 #   The merge driver keep_ours_paths_merge_driver knows the merge-strategies "onconflict-ours"
@@ -59,7 +51,7 @@ COMMON_DEST_BRANCH="childbranch_packagejson_version_changed"
 #
 # Value for merge from child branch to parent branch.
 #
-#export MERGE_DRIVER_MERGE_STRATEGY="always-ours"
+export MERGE_DRIVER_MERGE_STRATEGY="always-ours"
 #
 
 # Used in pre-script, defaults to https://github.com.
@@ -86,11 +78,14 @@ export IS_CREATE_PULL_REQUEST_URLS
 # The source- and dest-branches can be distinct to each repo when different to the default branches.
 # So the concurrent_git_merge.py has to create the merge-branch name (if either source- or dest-branch, or
 # both, should be part of the name).
-MERGE_BRANCH_TEMPLATE="merge/"
+MERGE_BRANCH_TEMPLATE="--merge-branch-template merge/"
 MERGE_BRANCH_TEMPLATE+="{{source_ref.replace('origin/','').replace('/', '_')}}"
 MERGE_BRANCH_TEMPLATE+="_into_"
 MERGE_BRANCH_TEMPLATE+="{{dest_branch.replace('/', '_')}}"
 MERGE_BRANCH_TEMPLATE+="_$DATE_STRING_FOR_MERGE_BRANCH"
+
+#MERGE_BRANCH_TEMPLATE="--merge-branch-template merge-branch"
+MERGE_BRANCH_TEMPLATE=""
 
 # The file where the pull request URLs are collected.
 # The LOGS_DIR is not yet created, create it.
@@ -160,7 +155,7 @@ python ../../src/concurrent_git_merge.py \
   mdtr:$COMMON_SOURCE_REF:$COMMON_DEST_BRANCH:jheger/mergedriver-testrepo \
   --default-source-ref "$COMMON_SOURCE_REF" \
   --default-dest-branch "$COMMON_DEST_BRANCH" \
-  --merge-branch-template "$MERGE_BRANCH_TEMPLATE" \
+  $MERGE_BRANCH_TEMPLATE \
   --merge-options "--no-ff -Xrenormalize -Xignore-space-at-eol" \
   --repos-dir "$REPOS_DIR" \
   --logs-dir "$LOGS_DIR" \
