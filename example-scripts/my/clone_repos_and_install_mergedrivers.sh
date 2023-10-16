@@ -105,7 +105,7 @@ if [[ ! -d "$CGM_REPO_DIR" ]]; then
     echo "#   Found reference-repo $REF_REPO, using option --reference."
     cmd+=" --reference $REF_REPO"
   else
-    echo "#   Haven't found reference-repo $REF_REPO, making a full clone (without option --reference)."
+    echo "#   Haven't found reference-repo $REF_REPO, making a full clone."
   fi
   echo "\$ $cmd"
   eval "$cmd"
@@ -125,8 +125,8 @@ echo "# Defining the merge drivers."
 echo "#   Defining the XML Maven merge driver:"
 cmd="git -C $CGM_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
 cmd+=" '"
-cmd+="$MERGE_DRIVER_EXECUTABLE -O %O -A %A -B %B -P ./%P"
-cmd+=" -p ${MERGE_DRIVER_MERGE_STRATEGY}:./version"
+cmd+="$MERGE_DRIVER_EXECUTABLE -t XML -O %O -A %A -B %B -P ./%P -p"
+cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./version"
 cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./parent/version"
 cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./properties/revision"
 cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./properties/:.+[.]version"
@@ -137,8 +137,8 @@ eval "$cmd"
 echo "#   Defining the JSON NPM merge driver:"
 cmd="git -C $CGM_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-merge-driver.driver"
 cmd+=" '"
-cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P"
-cmd+=" -p ${MERGE_DRIVER_MERGE_STRATEGY}:version"
+cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P -p"
+cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:version"
 cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:dependencies:@mycompany/.+"
 cmd+="'"
 echo "\$ $cmd"
@@ -147,8 +147,8 @@ eval "$cmd"
 # Set the "merge" attribute in .git/info/attributes if IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES
 # is true and the setting is absent in .git/info/attributes.
 echo ""
+ATTRIBUTES_FILE="$CGM_REPO_DIR/.git/info/attributes"
 if [[ $IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES == true ]]; then
-  ATTRIBUTES_FILE="$CGM_REPO_DIR/.git/info/attributes"
   echo "# IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES is true." \
     "Registering merge drivers in $ATTRIBUTES_FILE if not yet registered."
   MAVEN_POM_REGISTRATION="pom.xml merge=maven-pomxml-keep-ours-xpath-merge-driver"
@@ -178,4 +178,28 @@ if [[ $IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES == true ]]; then
   fi
 fi
 
+echo ""
+echo "# Summarize .git/config and .git/info/attributes."
+echo ""
+GIT_CONFIG="$CGM_REPO_DIR/.git/config"
+echo "#   $GIT_CONFIG:"
+if [[ -f "$GIT_CONFIG" ]]; then
+  echo "#   >>>>>"
+  cat "$GIT_CONFIG"
+  echo "#   <<<<<"
+else
+  echo "#   No .git/config file."
+fi
+
+echo ""
+echo "#   $ATTRIBUTES_FILE:"
+if [[ -f "$ATTRIBUTES_FILE" ]]; then
+  echo "#   >>>>>"
+  cat "$ATTRIBUTES_FILE"
+  echo "#   <<<<<"
+else
+  echo "#   No attributes file."
+fi
+
+echo ""
 echo "# Pre-script $0 called for repo $CGM_REPO_DIR finished."
