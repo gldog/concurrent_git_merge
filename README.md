@@ -2,6 +2,72 @@
 
 # Manual
 
+This script do merges in a list of repos. It was written to handle merges in projects comprising of
+multiple Git repositories but with shared source- and dest-branch names.
+
+The shared source- and dest-branch names can be given globally, but branch names specific to a repo
+can also be given individually.
+
+The merges are executed in concurrent merge tasks. For each task a logfile is written.
+
+This script do not clone the repos. This is because you might post-process cloned repos before merging, e.g.
+define merge drivers and register them in $GIT_DIR/info/attributes.
+
+At the beginning of a task, an optional pre-script given in --pre-script can be executed. Also at the end
+of a task an optional post-script given in --post-script can be executed.
+
+Overview of commands the concurrent_git_merge.py executes internally always:
+
+* {pre_script}, if given in --pre-script
+* git reset --hard
+* git clean -fd
+* git checkout {dest_branch}
+* Create merge branch and checkout, if --merge-branch-template is given.
+* git merge --no-edit {merge_options} {source_ref|merge-branch}
+* {post_script}, if given in --post-script
+
+`concurrent_git_merge.py` works purely locally, but can orchestrate cloning or fetching using the pre-script,
+and pushing and creating pull requests using the post-script.
+
+# Simple example
+
+    # It is assumed the repos are already cloned.
+    # Default remote.
+    : "${REMOTE=origin}"
+    export REMOTE
+    export BASE_URL_WITH_USERNAME="https://github.com/my-name"
+    export COMMON_SOURCE_REF="${REMOTE}/parent-branch"
+    export COMMON_DEST_BRANCH="child-branch"
+    REPOS_DIR="./repos"
+    LOGS_DIR="./logs/$(date +'%Y%m%d-%H%M%S')"    
+
+    concurrent_git_merge.pyz \
+      --repos-data \
+      repo-a:$COMMON_SOURCE_REF:$COMMON_DEST_BRANCH:$BASE_URL_WITH_USERNAME/repo-a \
+      repo-b:$COMMON_SOURCE_REF:$COMMON_DEST_BRANCH:$BASE_URL_WITH_USERNAME/repo-b \
+      --default-source-ref "$COMMON_SOURCE_REF" \
+      --default-dest-branch "$COMMON_DEST_BRANCH" \
+      --merge-options "--no-ff -Xrenormalize -Xignore-space-at-eol" \
+      --repos-dir "$REPOS_DIR" \
+      --logs-dir "$LOGS_DIR" \
+      --pre-script "bash -c 'git fetch --tags'" \
+      --post-script "bash -c 'git push --set-upstream origin HEAD'"
+
+# Complex example
+
+See example-scripts/my.
+
+Contents:
+
+* clone_repos_and_install_mergedrivers.sh: pre-script cloning or fetching a repo, installing merge drivers.
+* merge-demo.sh: Wrapper for concurrent_git_merge.pyz, similar to the code in chapter "Simple example".
+* post_merge.sh: post-script pushing the result and creating pull request URLs.
+
+This example installs a merge driver, but the merge driver is not part of the files checked-in to this example.
+Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/keep_ours_paths_merge_driver).
+
+# Command line reference
+
     $ python3 ../../src/concurrent_git_merge.py -h
     usage: concurrent_git_merge.py [-h] -r repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name]
                                    [repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name] ...] -d REPOS_DIR -o
@@ -15,22 +81,22 @@
     The shared source- and dest-branch names can be given globally, but branch names specific to a repo
     can also be given individually.
     
-    The merges are executed in concurrent merge-tasks. For each task a logfile is written.
+    The merges are executed in concurrent merge tasks. For each task a logfile is written.
     
     This script do not clone the repos. This is because you might post-process cloned repos before merging, e.g.
-    define merge-drivers and register them in $GIT_DIR/info/attributes.
+    define merge drivers and register them in $GIT_DIR/info/attributes.
     
-    At the begin of a task, an optional pre-script given in --pre-script can be executed. Also at the end
+    At the beginning of a task, an optional pre-script given in --pre-script can be executed. Also at the end
     of a task an optional post-script given in --post-script can be executed.
     
-    Overview of commands:
-        pre_script, if given in --pre-script
+    Overview of commands the concurrent_git_merge.py executes internally always:
+        {pre_script}, if given in --pre-script
         git reset --hard
         git clean -fd
         git checkout {dest_branch}
         Create merge branch and checkout, if --merge-branch-template is given.
         git merge --no-edit {merge_options} {source_ref|merge-branch}
-        post_script, if given in --post-script
+        {post_script}, if given in --post-script
     
     optional arguments:
       -h, --help            show this help message and exit
@@ -175,7 +241,8 @@
 
 # Create a fully self-contained executable zipapp
 
-You can create a fully self-contained executable zipapp `concurrent_git_merge.pyz` with all dependencies bundled into one
+You can create a fully self-contained executable zipapp `concurrent_git_merge.pyz` with all dependencies bundled into
+one
 file. This allows simple distribution without letting the uses install dependencies.
 
 In Linux and macOS:
