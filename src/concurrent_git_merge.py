@@ -91,7 +91,7 @@ def init_argument_parser():
                               to -D/--default-dest-branch. At lest one of the two must be given.
                           4. 'prj/repo_remote_name', optional
                               The remote project- and repo-name. Exposed as environment variable to
-                              the script given in --pre-script.
+                              the scripts given in --pre-script and --post-script.
                               The 'prj'-part is the Bitbucket-project or the Github-username or the
                               Gitlab-namespace.
                         The full notation is:
@@ -118,13 +118,13 @@ def init_argument_parser():
                                 -r product1-module1::: product1-module2::: \\
                                     -S origin/master -D my-feature
                           3) As example 2), but with abbreviated local repo-names, and
-                            'prj/repo_remote_name' given as named on the remote, to be exposed to
-                            the pre-merge-script. Because the parts are positional, the delimiters
-                            must be given.
+                             'prj/repo_remote_name' given as named on the remote, to be exposed to
+                             the scripts given in --pre-script and --post-script. Because the parts
+                             are positional, the delimiters must be given.
                                 -r p1-m1:::products/product1-module1 \\
                                    p1-m2:::products/product1-module2 \\
                                 -S origin/master  -D my-feature \\
-                                -e clone_if_absent_and_install_merge-drivers.sh"""))
+                                --pre-script clone_if_absent_and_install_merge-drivers.sh"""))
     parser.add_argument('-d', '--repos-dir', required=True,
                         help="Directory the repos resides.")
     parser.add_argument('-o', '--logs-dir', required=True,
@@ -142,17 +142,16 @@ def init_argument_parser():
                         help=textwrap.dedent("""\
                         Create a merge-branch based on the dest-branch and do the merge in this
                         branch. If the merge-branch exists it will be reused. This allows continuing
-                        a merge by calling the merge script again (if the merge-branch name doesn't
-                        have a date generated at the time of calling the merge script).
-                        A merge-branch typically is used in case you wan't to create a pull request
-                        from the merge-result to an upstream-branch. Either because you want QA
-                        on the PR, or you have no permission to merge into the target-branch
+                        a merge by calling the merge script again.
+                        A merge-branch is typically used in case a pull request from the merge-result
+                        to the dest-branch will be created to decouple the merge. Either because of
+                        QA on the PR, or because of lacking permission to merge into the target-branch
                         directly.
-                        The template generating the name of the merge-branch is a jinja2-template
+                        The template generating the name of the merge-branch is a jinja2 template
                         and understands the following placeholders:
                           o repo_local_name     From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
-                          o source_ref       From parameter -r/--repos-data the 2nd part
+                          o source_ref          From parameter -r/--repos-data the 2nd part
                                                 'source_ref', or the default-source-ref -S if
                                                 absent.
                           o dest_branch         From parameter -r/--repos-data the 3rd part
@@ -163,27 +162,27 @@ def init_argument_parser():
                           o repo_data_from_parameter    From parameter -r/--repos-data the
                                                 complete string.
                           o task_start          The timestamp the repo's task has been started.
-                        The task_start is of Python-type 'datetime'. strftime() can be used to
-                        generate a pretty-print timestamp. An example to be used in a bash-script:
-                            parameters=" --merge-branch-template
-                            parameters+=" merge/from_{{source_ref.replace('origin/','')}}"
-                            parameters+="_into_{{dest_branch}}_{{task_start.strftime('%%Y%%m%%d-%%H%%M%%S')}}"
-                        The task's timestamps are very close to the one the script was started. But you might
-                        prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
+                        The task_start is of Python-type 'datetime'.
+                        Example:
                             DATE_STR="$(date +'%%Y%%m%%d-%%H%%M%%S')"
+                            MERGE_BRANCH_TEMPLATE="--merge-branch-template merge/"
+                            MERGE_BRANCH_TEMPLATE+="{{source_ref.replace('origin/','').replace('/', '_')}}"
+                            MERGE_BRANCH_TEMPLATE+="_into_"
+                            MERGE_BRANCH_TEMPLATE+="{{dest_branch.replace('/', '_')}}"
+                            MERGE_BRANCH_TEMPLATE+="_$DATE_STR"
                             concurrent_git_merge.py \\
-                              --merge-branch-template "merge/...$DATE_STR" \\
+                              --merge-branch-template "$MERGE_BRANCH_TEMPLATE" \\
                               --logs-dir "./logs/$DATE_STRING" \\
                               ... """))
     parser.add_argument('-l', '--log-level', choices=LOG_LEVELS, default=DEFAULT_LOGLEVEL,
                         help=f"Defaults to {DEFAULT_LOGLEVEL}.")
     parser.add_argument('--pre-script',
                         help=textwrap.dedent("""\
-                        This script is executed at the begin of each repo's merge-task. Here you can
-                        clone the repos, install merge-drivers, and others. This script doesn't run
-                        in the repo's directory. Therefore the Git-command must be given with 
-                        '-C $CGM_REPO_DIR', or you have to change to the repo's directory in the
-                        script. This script runs in an environment with repo-specific environment
+                        This script is executed at the beginning of each repo's merge-task. Here
+                        you can clone the repos, install merge-drivers, and others. This script
+                        doesn't run in the repo's directory. Therefore, Git-commands must be called 
+                        with '-C $CGM_REPO_DIR', or you have to change to the repo's directory in
+                        the script. This script runs in an environment with repo-specific environment
                         variables exposed:
                           o CGM_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                 'repo_local_name'.
@@ -193,8 +192,8 @@ def init_argument_parser():
                           o CGM_DEST_BRANCH     From parameter -r/--repos-data the 3rd part
                                                 'dest-branch', or the default-dest-branch -D if
                                                 absent.
-                          o CGM_PRJ_AND_REPO_REMOTE_NAME    From parameter -r/--repos-data the 4th
-                                                part 'prj/repo-remote-name'.
+                          o CGM_PRJ_AND_REPO_REMOTE_NAME    From parameter -r/--repos-data the
+                                                4th part 'prj/repo-remote-name'.
                           o CGM_REPO_DATA_FROM_PARAMETER    From parameter -r/--repos-data the
                                                 complete string.
                           o CGM_TASK_START      The timestamp the repo's task has been started.
@@ -206,7 +205,7 @@ def init_argument_parser():
                           o CGM_LOGS_DIR        From parameter -o/--logs-dir.
                         For cloning you'll use CGM_REPOS_DIR, and for commands inside a repo you'll
                         use CGM_REPO_DIR.
-                        On Windows and Gitbash you should call the script with 'bash -c your-script.sh'
+                        On Windows and Gitbash you should call the script with 'bash -c script.sh'
                         Otherwise it could be Windows opens it with the default-application, e.g. a
                         text editor."""))
     parser.add_argument('--post-script',
@@ -411,6 +410,7 @@ def execute_merge(repo_metadata):
         # The repo is expected to be present.
         if not pathlib.Path(repo_dir, '.git').is_dir():
             raise Exception(
+                f"'{repo_dir}' is not a Git-repo. " +
                 f"Repo '{repo_local_name}' is given in parameter " +
                 f"-r/--repos-data {repo_metadata['repo_data_from_parameter']}, " +
                 f"but it is missing in parameter -d/--repos-dir {g_cl_args.repos_dir}.")

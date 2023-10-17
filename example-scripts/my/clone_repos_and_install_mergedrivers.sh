@@ -4,7 +4,7 @@
 #
 # Pre-script for concurrent_git_merge.py
 #
-# This script clones a Git repo if absent and installs custom merge driver(s).
+# This script clones a Git repo if absent and installs custom merge driver.
 #
 # This script is called by concurrent_git_merge.py using parameter --pre-script. It is an example.
 # concurrent_git_merge.py calls this pre-script for each repo to be merged concurrently.
@@ -36,8 +36,8 @@
 #     pom.xml merge=maven-pomxml-keep-ours-xpath-merge-driver
 #     package.json merge=npm-packagejson-keep-ours-jpath-merge-driver
 #
-# The "maven-pomxml-keep-ours-xpath-merge-driver" and "npm-packagejson-keep-ours-jpath-merge-driver"
-# are the logical names of the merge drivers, not the names of the merge driver's executable.
+# In this script the keep_ours_paths_merge_driver https://github.com/gldog/keep_ours_paths_merge_driver
+# is used.
 #
 
 set -eu
@@ -58,11 +58,12 @@ function on_error() {
 # The merge driver keep_ours_paths_merge_driver knows the merge-strategies "onconflict-ours"
 # and "always-ours". The default is "onconflict-ours".
 # For merges from parent to child branch choose "onconflict-ours". For merges back from child to
-# parent choose "always-ours" ("ours" then is the parent).
+# parent choose "always-ours" ("ours" then is the parent). Despite "onconflict-ours" is the default
+# it is given here explicitly for demonstration.
 : "${MERGE_DRIVER_MERGE_STRATEGY:='onconflict-ours'}"
 
 # The merge driver executable, set by the overall calling script. This line is also the check if it
-# is set. The merge diver is only used in this pre-script. But it is defined in concurrent_git_merge.sh
+# is set. The merge diver is only used in this pre-script. But it is defined in the calling script
 # to fail-fast in case it is not callable.
 echo ""
 echo "# MERGE_DRIVER_EXECUTABLE: ${MERGE_DRIVER_EXECUTABLE}."
@@ -71,8 +72,9 @@ cmd="printenv | sort | grep CGM_"
 echo "\$ $cmd"
 eval "$cmd"
 
-# If concurrent_git_merge.py is called in Gitbash, Python in fact runs it in a Windows environment and
-# creates Windows-style paths. Make the paths Unix-style-paths.
+# If concurrent_git_merge.py is called in Gitbash, Python in fact runs it in a Windows environment
+# and creates Windows-style paths. Make the paths Unix-style-paths (I'm in Linux, macOS, Gitbash,
+# but not in CMD).
 export CGM_REPO_DIR="${CGM_REPO_DIR//\\//}"
 export CGM_REPOS_DIR="${CGM_REPOS_DIR//\\//}"
 export CGM_LOGS_DIR="${CGM_LOGS_DIR//\\//}"
@@ -122,7 +124,7 @@ fi
 # installed.
 echo ""
 echo "# Defining the merge drivers."
-echo "#   Defining the XML Maven merge driver:"
+echo "#   Defining the XML Maven pom.xml merge driver:"
 cmd="git -C $CGM_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
 cmd+=" '"
 cmd+="$MERGE_DRIVER_EXECUTABLE -t XML -O %O -A %A -B %B -P ./%P -p"
@@ -134,7 +136,7 @@ cmd+="'"
 echo "\$ $cmd"
 eval "$cmd"
 
-echo "#   Defining the JSON NPM merge driver:"
+echo "#   Defining the JSON NPM package.json merge driver:"
 cmd="git -C $CGM_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-merge-driver.driver"
 cmd+=" '"
 cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P -p"

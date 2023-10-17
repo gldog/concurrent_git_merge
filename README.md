@@ -23,7 +23,7 @@ Overview of commands the concurrent_git_merge.py executes internally always:
 * git clean -fd
 * git checkout {dest_branch}
 * Create merge branch and checkout, if --merge-branch-template is given.
-* git merge --no-edit {merge_options} {source_ref|merge-branch}
+* git merge --no-edit {merge_options} {source_ref | merge-branch}
 * {post_script}, if given in --post-script
 
 `concurrent_git_merge.py` works purely locally, but can orchestrate cloning or fetching using the pre-script,
@@ -55,16 +55,24 @@ and pushing and creating pull requests using the post-script.
 
 # Complex example
 
-See example-scripts/my.
+Code example-scripts/my.
 
-Contents:
+This demo combines two topics:
+
+1. Demonstrate how to configure the concurrent_git_merge.py.
+2. Demonstrate how to use a merge driver.
+
+Directory content:
 
 * clone_repos_and_install_mergedrivers.sh: pre-script cloning or fetching a repo, installing merge drivers.
-* merge-demo.sh: Wrapper for concurrent_git_merge.pyz, similar to the code in chapter "Simple example".
-* post_merge.sh: post-script pushing the result and creating pull request URLs.
+* keep_ours_paths_merge_driver.pyz: Merge driver, located here but not checked-in.
+  See [keep_ours_paths_merge_driver](https://github.com/gldog/keep_ours_paths_merge_driver).
+* merge-demo.sh: Wrapper for concurrent_git_merge.pyz.
+* post-script.sh: post-script pushing the result and creating a pull request URL.
 
-This example installs a merge driver, but the merge driver is not part of the files checked-in to this example.
-Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/keep_ours_paths_merge_driver).
+The overall script merge-demo.sh configures and calls concurrent_git_merge.py.
+concurrent_git_merge.py calls the pre-script, then triggers the `git merge`, then calls the post-script.
+The `git merge` calls the merge driver.
 
 # Command line reference
 
@@ -114,7 +122,7 @@ Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/ke
                                   to -D/--default-dest-branch. At lest one of the two must be given.
                               4. 'prj/repo_remote_name', optional
                                   The remote project- and repo-name. Exposed as environment variable to
-                                  the script given in --pre-script.
+                                  the scripts given in --pre-script and --post-script.
                                   The 'prj'-part is the Bitbucket-project or the Github-username or the
                                   Gitlab-namespace.
                             The full notation is:
@@ -142,12 +150,12 @@ Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/ke
                                         -S origin/master -D my-feature
                               3) As example 2), but with abbreviated local repo-names, and
                                 'prj/repo_remote_name' given as named on the remote, to be exposed to
-                                the pre-merge-script. Because the parts are positional, the delimiters
-                                must be given.
+                                the scripts given in --pre-script and --post-script. Because the parts
+                                are positional, the delimiters must be given.
                                     -r p1-m1:::products/product1-module1 \
                                        p1-m2:::products/product1-module2 \
                                     -S origin/master  -D my-feature \
-                                    -e clone_if_absent_and_install_merge-drivers.sh
+                                    --pre-script clone_if_absent_and_install_merge-drivers.sh
       -d REPOS_DIR, --repos-dir REPOS_DIR
                             Directory the repos resides.
       -o LOGS_DIR, --logs-dir LOGS_DIR
@@ -163,9 +171,8 @@ Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/ke
       -t MERGE_BRANCH_TEMPLATE, --merge-branch-template MERGE_BRANCH_TEMPLATE
                             Create a merge-branch based on the dest-branch and do the merge in this
                             branch. If the merge-branch exists it will be reused. This allows continuing
-                            a merge by calling the merge script again (if the merge-branch name doesn't
-                            have a date generated at the time of calling the merge script).
-                            A merge-branch typically is used in case you wan't to create a pull request
+                            a merge by calling the merge script again.
+                            A merge-branch is typically used in case you're going to create a pull request
                             from the merge-result to an upstream-branch. Either because you want QA
                             on the PR, or you have no permission to merge into the target-branch
                             directly.
@@ -184,37 +191,37 @@ Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/ke
                               o repo_data_from_parameter    From parameter -r/--repos-data the
                                                     complete string.
                               o task_start          The timestamp the repo's task has been started.
-                            The task_start is of Python-type 'datetime'. strftime() can be used to
-                            generate a pretty-print timestamp. An example to be used in a bash-script:
-                                parameters=" --merge-branch-template
-                                parameters+=" merge/from_{{source_ref.replace('origin/','')}}"
-                                parameters+="_into_{{dest_branch}}_{{task_start.strftime('%Y%m%d-%H%M%S')}}"
-                            The task's timestamps are very close to the one the script was started. But you might
-                            prefer a guaranteed common timestamp for all merge-branches (and for the logs-dir):
-                                DATE_STR="$(date +'%Y%m%d-%H%M%S')"
-                                concurrent_git_merge.py \
-                                  --merge-branch-template "merge/...$DATE_STR" \
-                                  --logs-dir "./logs/$DATE_STRING" \
+                            The task_start is of Python-type 'datetime'.
+                            Example:
+                                DATE_STR="$(date +'%Y%m%d')"
+                                MERGE_BRANCH_TEMPLATE="--merge-branch-template merge/"
+                                MERGE_BRANCH_TEMPLATE+="{{source_ref.replace('origin/','').replace('/', '_')}}"
+                                MERGE_BRANCH_TEMPLATE+="_into_"
+                                MERGE_BRANCH_TEMPLATE+="{{dest_branch.replace('/', '_')}}"
+                                MERGE_BRANCH_TEMPLATE+="_$DATE_STR"
+                                concurrent_git_merge.pyz \\
+                                  --merge-branch-template "$MERGE_BRANCH_TEMPLATE" \\
+                                  --logs-dir "./logs/$DATE_STRING" \\
                                   ... 
       -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Defaults to INFO.
       --pre-script PRE_SCRIPT
-                            This script is executed at the begin of each repo's merge-task. Here you can
-                            clone the repos, install merge-drivers, and others. This script doesn't run
-                            in the repo's directory. Therefore the Git-command must be given with 
-                            '-C $CGM_REPO_DIR', or you have to change to the repo's directory in the
-                            script. This script runs in an environment with repo-specific environment
+                            This script is executed at the beginning of each repo's merge-task. Here
+                            you can clone the repos, install merge-drivers, and others. This script
+                            doesn't run in the repo's directory. Therefore, Git-commands must be called 
+                            with '-C $CGM_REPO_DIR', or you have to change to the repo's directory in
+                            the script. This script runs in an environment with repo-specific environment
                             variables exposed:
                               o CGM_REPO_LOCAL_NAME From parameter -r/--repos-data the 1st part
                                                     'repo_local_name'.
-                              o CGM_SOURCE_REF   From parameter -r/--repos-data the 2nd part
+                              o CGM_SOURCE_REF      From parameter -r/--repos-data the 2nd part
                                                     'source_ref', or the default-source-ref -S if
                                                     absent.
                               o CGM_DEST_BRANCH     From parameter -r/--repos-data the 3rd part
                                                     'dest-branch', or the default-dest-branch -D if
                                                     absent.
-                              o CGM_PRJ_AND_REPO_REMOTE_NAME    From parameter -r/--repos-data the 4th
-                                                    part 'prj/repo-remote-name'.
+                              o CGM_PRJ_AND_REPO_REMOTE_NAME    From parameter -r/--repos-data the
+                                                    4th part 'prj/repo-remote-name'.
                               o CGM_REPO_DATA_FROM_PARAMETER    From parameter -r/--repos-data the
                                                     complete string.
                               o CGM_TASK_START      The timestamp the repo's task has been started.
@@ -226,7 +233,7 @@ Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/ke
                               o CGM_LOGS_DIR        From parameter -o/--logs-dir.
                             For cloning you'll use CGM_REPOS_DIR, and for commands inside a repo you'll
                             use CGM_REPO_DIR.
-                            On Windows and Gitbash you should call the script with 'bash -c your-script.sh'
+                            On Windows and Gitbash you should call the script with 'bash -c script.sh'
                             Otherwise it could be Windows opens it with the default-application, e.g. a
                             text editor.
       --post-script POST_SCRIPT
@@ -238,6 +245,40 @@ Please have a look at [keep_ours_paths_merge_driver](https://github.com/gldog/ke
                             A most simple post-script parameter could be:
                                 --post-script 'bash -c "git push --set-upstream origin HEAD"'
                             (The push --set-upstream can be executed multiple times without error.)
+
+# Merge use cases
+
+Update child branch from parent branch:
+
+    ------------------------------------------------------  Parent, SOURCE_REF
+              \                  |
+               \           merge |
+                \                ↓
+                 ----------------*------------------------  Child, DEST_BRANCH
+
+Merge back child branch to parent branch:
+
+    -----------------------------*------------------------  Parent, DEST_BRANCH
+              \                  ↑
+               \           merge |
+                \                |
+                 -----------------------------------------  Child, SOURCE_REF
+
+Update child branch from parent branch using a merge branch and pull request:
+
+    ------------------------------------------------------  Parent, SOURCE_REF
+              \           1. merge ↓
+               \           --------*----------------------  merge-branch (generated)
+                \        /         M    ↓ 2. PR
+                 -----------------------------------------  Child, DEST_BRANCH
+
+Merge back child branch to parent branch using a merge branch and pull request:
+
+    ------------------------------------------------------  Parent, DEST_BRANCH
+              \          \              ↑ 2. PR
+               \           --------*----------------------  merge-branch (generated)
+                \         1. merge ↑ M
+                 -----------------------------------------  Child, SOURCE_REF
 
 # Create a fully self-contained executable zipapp
 
