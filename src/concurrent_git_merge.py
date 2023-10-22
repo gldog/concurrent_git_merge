@@ -51,7 +51,7 @@ def init_argument_parser():
         formatter_class=lambda prog: argparse.RawTextHelpFormatter(prog, width=120),
 
         # -- 50 --------------- | ---------------------------------------------------------------- 100 -- #
-        description=textwrap.dedent("""\
+        description=textwrap.dedent(f"""\
         This script do merges in a list of repos. It was written to handle merges in projects comprising of
         multiple Git repositories but with shared source- and dest-branch names.
         
@@ -60,20 +60,14 @@ def init_argument_parser():
 
         The merges are executed in concurrent merge tasks. For each task a logfile is written.
 
-        This script do not clone the repos. This is because you might post-process cloned repos before merging, e.g.
-        define merge drivers and register them in $GIT_DIR/info/attributes.
+        This script do not clone the repos. This is because you might post-process cloned repos before merging,
+        e.g. define merge drivers and register them in $GIT_DIR/info/attributes.
 
-        At the beginning of a task, an optional pre-script given in --pre-script can be executed. Also at the end
-        of a task an optional post-script given in --post-script can be executed.
+        At the beginning of a task, an optional pre-script given in --pre-script is executed. Also at the end
+        of a task an optional post-script given in --post-script is executed.
         
-        Overview of commands the concurrent_git_merge.py executes internally always:
-            {pre_script}, if given in --pre-script
-            git reset --hard
-            git clean -fd
-            git checkout {dest_branch}
-            Create merge branch and checkout, if --merge-branch-template is given.
-            git merge --no-edit {merge_options} {source_ref|merge-branch}
-            {post_script}, if given in --post-script"""))
+        Version: {__version__}
+        More:    https://github.com/gldog/concurrent_git_merge"""))
     parser.add_argument('-r', '--repos-data', required=True, nargs='+',
                         metavar='repo_local_name:[source_ref]:[dest_branch]:[prj/repo_remote_name]',
                         # ---------------------------------------------------------------- 100 -- #
