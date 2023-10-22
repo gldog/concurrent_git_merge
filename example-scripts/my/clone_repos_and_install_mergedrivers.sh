@@ -141,7 +141,6 @@ cmd="git -C $CGM_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-m
 cmd+=" '"
 cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P -p"
 cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:version"
-cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:dependencies:@mycompany/.+"
 cmd+="'"
 echo "\$ $cmd"
 eval "$cmd"
@@ -152,32 +151,27 @@ echo ""
 ATTRIBUTES_FILE="$CGM_REPO_DIR/.git/info/attributes"
 if [[ $IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES == true ]]; then
   echo "# IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES is true." \
-    "Registering merge drivers in $ATTRIBUTES_FILE if not yet registered."
+    "Registering merge drivers in $ATTRIBUTES_FILE."
+  # Create the file if absent.
+  touch "$ATTRIBUTES_FILE"
+  echo "# Remove all our merge-drivers from $ATTRIBUTES_FILE."
+  # Our merge driver are:
+  #   - maven-pomxml-keep-ours-xpath-merge-driver
+  #   - npm-packagejson-keep-ours-jpath-merge-driver
+  # Their name substrings keep-ours-xpath-merge-driver and keep-ours-jpath-merge-driver are almost equal, the only
+  # difference is the x/j.
+  grep -v "keep-ours-.path-merge-driver" "$ATTRIBUTES_FILE" >"${ATTRIBUTES_FILE}.tmp" || true
   MAVEN_POM_REGISTRATION="pom.xml merge=maven-pomxml-keep-ours-xpath-merge-driver"
   NPM_PACKAGE_JSON_REGISTRATION="package.json merge=npm-packagejson-keep-ours-jpath-merge-driver"
-  if [[ ! -f "$ATTRIBUTES_FILE" ]]; then
-    echo "#   File $ATTRIBUTES_FILE is not present, creating it."
-    echo "#   Registering Maven Pom merge driver in $ATTRIBUTES_FILE: $MAVEN_POM_REGISTRATION"
-    echo "$MAVEN_POM_REGISTRATION" >>"$ATTRIBUTES_FILE"
-    echo "#   Registering NPM package.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
-    echo "$NPM_PACKAGE_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
-  else
-    echo "#   File $ATTRIBUTES_FILE already present."
-    echo "#   Checking if Maven Pom merge driver already registered in $ATTRIBUTES_FILE or shall be registered."
-    if ! grep -Fq "$MAVEN_POM_REGISTRATION" "$ATTRIBUTES_FILE"; then
-      echo "#    Is not present. Registering Maven Pom merge driver in $ATTRIBUTES_FILE: $MAVEN_POM_REGISTRATION"
-      echo "$MAVEN_POM_REGISTRATION" >>"$ATTRIBUTES_FILE"
-    else
-      echo "#     Is present."
-    fi
-    echo "#   Checking if NPM package.json merge driver already registered in $ATTRIBUTES_FILE or shall be registered."
-    if ! grep -Fq "$NPM_PACKAGE_JSON_REGISTRATION" "$ATTRIBUTES_FILE"; then
-      echo "#   Is not present. Registering NPM package.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
-      echo "$NPM_PACKAGE_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
-    else
-      echo "#     Is present."
-    fi
-  fi
+  NPM_PACKAGELOCK_JSON_REGISTRATION="package-lock.json merge=npm-packagejson-keep-ours-jpath-merge-driver"
+  mv "${ATTRIBUTES_FILE}.tmp" "$ATTRIBUTES_FILE"
+  echo "# Registering Maven Pom merge driver in $ATTRIBUTES_FILE: $MAVEN_POM_REGISTRATION"
+  echo "$MAVEN_POM_REGISTRATION" >>"$ATTRIBUTES_FILE"
+  echo "# Registering NPM package.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
+  echo "$NPM_PACKAGE_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
+  # The registration for package-lock.json is done with merge driver for package.json.
+  echo "# Registering NPM package-lock.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
+  echo "$NPM_PACKAGELOCK_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
 fi
 
 echo ""
