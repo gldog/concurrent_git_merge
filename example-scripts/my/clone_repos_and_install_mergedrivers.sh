@@ -119,6 +119,15 @@ else
   cmd="git -C $CGM_REPO_DIR fetch --tags ${REMOTE///}"
   echo "\$ $cmd"
   eval "$cmd"
+  echo ""
+  echo "# Checkout dest-branch"
+  cmd="git -C $CGM_REPO_DIR checkout $CGM_DEST_BRANCH"
+  echo "\$ $cmd"
+  eval "$cmd"
+  echo "# Pull dest-branch"
+  cmd="git -C $CGM_REPO_DIR pull"
+  echo "\$ $cmd"
+  eval "$cmd"
 fi
 
 # The same merge-driver can be defined repeatedly without error. Don't care if it is already
