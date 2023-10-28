@@ -33,8 +33,8 @@
 #
 # The "merge" setting in .gitattributes and .git/info/attributes are the same, e.g.:
 #
-#     pom.xml merge=maven-pomxml-keep-ours-xpath-merge-driver
-#     package.json merge=npm-packagejson-keep-ours-jpath-merge-driver
+#     pom.xml merge=maven-pomxml-keep-ours-path-merge-driver
+#     package.json merge=npm-packagejson-keep-ours-path-merge-driver
 #
 # In this script the keep_ours_paths_merge_driver https://github.com/gldog/keep_ours_paths_merge_driver
 # is used.
@@ -135,7 +135,7 @@ fi
 echo ""
 echo "# Defining the merge drivers."
 echo "#   Defining the XML Maven pom.xml merge driver:"
-cmd="git -C $CGM_REPO_DIR config --local merge.maven-pomxml-keep-ours-xpath-merge-driver.driver"
+cmd="git -C $CGM_REPO_DIR config --local merge.maven-pomxml-keep-ours-path-merge-driver.driver"
 cmd+=" '"
 cmd+="$MERGE_DRIVER_EXECUTABLE -t XML -O %O -A %A -B %B -P ./%P -p"
 cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./version"
@@ -147,7 +147,7 @@ echo "\$ $cmd"
 eval "$cmd"
 
 echo "#   Defining the JSON NPM package.json merge driver:"
-cmd="git -C $CGM_REPO_DIR config --local merge.npm-packagejson-keep-ours-jpath-merge-driver.driver"
+cmd="git -C $CGM_REPO_DIR config --local merge.npm-packagejson-keep-ours-path-merge-driver.driver"
 cmd+=" '"
 cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P -p"
 cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:version"
@@ -164,24 +164,20 @@ if [[ $IS_REGISTER_MERGEDRIVER_IN_GITDIR_INFO_ATTRIBUTES == true ]]; then
     "Registering merge drivers in $ATTRIBUTES_FILE."
   # Create the file if absent.
   touch "$ATTRIBUTES_FILE"
+  # Removing and re-inserting the merge drivers makes them robust against reconfiguration-problems regarding existing
+  # ones.
   echo "# Remove all our merge-drivers from $ATTRIBUTES_FILE."
-  # Our merge driver are:
-  #   - maven-pomxml-keep-ours-xpath-merge-driver
-  #   - npm-packagejson-keep-ours-jpath-merge-driver
-  # Their name substrings keep-ours-xpath-merge-driver and keep-ours-jpath-merge-driver are almost equal, the only
-  # difference is the x/j.
-  grep -v "keep-ours-.path-merge-driver" "$ATTRIBUTES_FILE" >"${ATTRIBUTES_FILE}.tmp" || true
-  MAVEN_POM_REGISTRATION="pom.xml merge=maven-pomxml-keep-ours-xpath-merge-driver"
-  NPM_PACKAGE_JSON_REGISTRATION="package.json merge=npm-packagejson-keep-ours-jpath-merge-driver"
-  NPM_PACKAGELOCK_JSON_REGISTRATION="package-lock.json merge=npm-packagejson-keep-ours-jpath-merge-driver"
+  echo ""
+  # Two ways of removing lines from a text-files are "grep -v" and "sed -d". But sed's "-d" is not portable. Hence,
+  # grep is used. But "grep -v" leaves empty lines. They are squeezes with "cat -s":
+  #   cat -s/--squeeze-blank: suppress repeated empty output lines.
+  grep -v "keep-ours-path-merge-driver" "$ATTRIBUTES_FILE" | cat -s >"${ATTRIBUTES_FILE}.tmp"
+  MERGE_DRIVER_REGISTRATION="/pom.xml merge=maven-pomxml-keep-ours-path-merge-driver\n"
+  MERGE_DRIVER_REGISTRATION+="/package.json merge=npm-packagejson-keep-ours-path-merge-driver\n"
+  MERGE_DRIVER_REGISTRATION+="/package-lock.json merge=npm-packagejson-keep-ours-path-merge-driver\n"
   mv "${ATTRIBUTES_FILE}.tmp" "$ATTRIBUTES_FILE"
-  echo "# Registering Maven Pom merge driver in $ATTRIBUTES_FILE: $MAVEN_POM_REGISTRATION"
-  echo "$MAVEN_POM_REGISTRATION" >>"$ATTRIBUTES_FILE"
-  echo "# Registering NPM package.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
-  echo "$NPM_PACKAGE_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
-  # The registration for package-lock.json is done with merge driver for package.json.
-  echo "# Registering NPM package-lock.json merge driver in $ATTRIBUTES_FILE: $NPM_PACKAGE_JSON_REGISTRATION"
-  echo "$NPM_PACKAGELOCK_JSON_REGISTRATION" >>"$ATTRIBUTES_FILE"
+  echo -e "# Registering Maven Pom and NPM package/lock.json merge drivers in $ATTRIBUTES_FILE:\n$MERGE_DRIVER_REGISTRATION"
+  echo -e "$MERGE_DRIVER_REGISTRATION" >>"$ATTRIBUTES_FILE"
 fi
 
 echo ""
