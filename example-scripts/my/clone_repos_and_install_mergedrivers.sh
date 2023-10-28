@@ -197,6 +197,3 @@ if [[ -f "$ATTRIBUTES_FILE" ]]; then
 else
   echo "#   No attributes file."
 fi
-
-echo ""
-echo "# Pre-script $0 called for repo $CGM_REPO_DIR finished."

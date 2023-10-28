@@ -80,14 +80,15 @@ export IS_CREATE_PULL_REQUEST_URLS
 # The source- and dest-branches can be distinct to each repo when different to the default branches.
 # So the concurrent_git_merge.py has to create the merge-branch name (if either source- or dest-branch, or
 # both, should be part of the name).
-MERGE_BRANCH_TEMPLATE="--merge-branch-template merge/"
-MERGE_BRANCH_TEMPLATE+="{{source_ref.replace('origin/','').replace('/', '_')}}"
-MERGE_BRANCH_TEMPLATE+="_into_"
-MERGE_BRANCH_TEMPLATE+="{{dest_branch.replace('/', '_')}}"
-MERGE_BRANCH_TEMPLATE+="_$DATE_STRING_FOR_MERGE_BRANCH"
+MERGE_BRANCH_TEMPLATE="--merge-branch-template "
+MERGE_BRANCH_TEMPLATE+="merge/"
+MERGE_BRANCH_TEMPLATE+="{{source_ref.replace('origin/','').replace('/','_')}}"
+MERGE_BRANCH_TEMPLATE+="__into__"
+MERGE_BRANCH_TEMPLATE+="{{dest_branch.replace('/','_')}}"
+MERGE_BRANCH_TEMPLATE+="__$DATE_STRING_FOR_MERGE_BRANCH"
 
 #MERGE_BRANCH_TEMPLATE="--merge-branch-template merge-branch"
-MERGE_BRANCH_TEMPLATE=""
+#MERGE_BRANCH_TEMPLATE=""
 
 # The file where the pull request URLs are collected.
 # The LOGS_DIR is not yet created, create it.

@@ -124,5 +124,3 @@ if [[ "$IS_CREATE_PULL_REQUEST_URLS" == true ]]; then
     echo "$pr_url" >>"$PULL_REQUEST_URLS_FILE"
   fi
 fi
-
-echo "# Post-script finished."
