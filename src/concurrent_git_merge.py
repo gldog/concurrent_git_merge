@@ -321,20 +321,21 @@ def log_task(logfile_name: str, logfile_content: str):
         f.write(logfile_content)
 
 
-def run_command(command, repo_name, logfile_name, honor_returncode=True, suppress_stdout=False, env=None):
+def run_command(command, repo_name, logfile_name, honor_returncode=True, suppress_stdout=False, env=None,
+                output_on_error=True):
     g_logger.info(f"{repo_name}: $ {command}")
     log_task(logfile_name, f"$ {command}\n")
     timestamp_begin = datetime.now()
+    # Redirect stderr to stdout.
     r = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, text=True, env=env)
     timestamp_end = datetime.now()
-    output = f"Returncode: {r.returncode}; Duration: {timestamp_end - timestamp_begin}"
+    output = f"Returncode: {r.returncode}; Duration: {format_timedelta(timestamp_end - timestamp_begin)}"
     if not suppress_stdout:
         output += f"; Output:\n{r.stdout}"
     log_task(logfile_name, f"{output}\n")
     if honor_returncode and r.returncode != 0:
-        error_msg = f"{repo_name}: The following command exited with exit-code {r.returncode}:\n" \
-                    f"{command}\n{r.stdout}"
-        raise Exception(error_msg)
+        output = f"\n{r.stdout}" if output_on_error else ''
+        raise Exception(f"{repo_name}: The following command exited with exit-code {r.returncode}:\n{command}{output}")
     return r
 
 
@@ -398,7 +399,9 @@ def execute_merge(repo_metadata):
             log_task(logfile_name, "\nPRE-SCRIPT BEGIN >>>>>\n\n")
             log_task(logfile_name, "# Pre-script called by command:\n")
             command = g_cl_args.pre_script
-            run_command(command, repo_local_name, logfile_name, env=extended_env)
+            # output_on_error=False: Just log the command and exit-code, do not mess up the output with whole
+            # script-output.
+            run_command(command, repo_local_name, logfile_name, env=extended_env, output_on_error=False)
             log_task(logfile_name, ">>>>> PRE-SCRIPT END\n\n")
 
         # The repo is expected to be present.
@@ -437,7 +440,9 @@ def execute_merge(repo_metadata):
         if g_cl_args.post_script:
             log_task(logfile_name, "POST-SCRIPT BEGIN >>>>>\n\n")
             command = g_cl_args.post_script
-            run_command(command, repo_local_name, logfile_name, env=extended_env)
+            # output_on_error=False: Just log the command and exit-code, do not mess up the output with whole
+            # script-output.
+            run_command(command, repo_local_name, logfile_name, env=extended_env, output_on_error=False)
             log_task(logfile_name, ">>>>> POST-SCRIPT END\n\n")
 
         if r_merge.returncode != 0:
