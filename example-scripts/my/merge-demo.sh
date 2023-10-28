@@ -30,10 +30,12 @@ set -u
 #   COMMON_SOURCE_REF=stable-build-4
 #
 #
-# Default remote. Might be use here, and is used in pre-script.
-: "${REMOTE=origin}"
+# In pre-script, REMOTE is used as "pure" remote name, not as a prefix, and must not have any
+# trailing slash. But removing a slash handles the pre-script itself.
+# This allows setting the REMOTE with or without slash from external.
+: "${REMOTE=origin/}"
 export REMOTE
-export COMMON_SOURCE_REF="${REMOTE}/childbranch_packagejson_version_changed"
+export COMMON_SOURCE_REF="${REMOTE}childbranch_packagejson_version_changed"
 export COMMON_DEST_BRANCH="parentbranch_packagejson_version_changed"
 #
 #

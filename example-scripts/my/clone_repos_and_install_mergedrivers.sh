@@ -115,7 +115,8 @@ else
   echo ""
   echo "#   Repo $CGM_REPO_DIR is present."
   echo "#   Fetching all tags."
-  cmd="git -C $CGM_REPO_DIR fetch --tags $REMOTE"
+  # REMOTE might have a trailing slash. Remove it.
+  cmd="git -C $CGM_REPO_DIR fetch --tags ${REMOTE///}"
   echo "\$ $cmd"
   eval "$cmd"
 fi
