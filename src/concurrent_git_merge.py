@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import List
 
 from jinja2 import Environment
+from tabulate import tabulate
 
 __version__ = '1.0.0-dev'
 
@@ -384,7 +385,7 @@ def execute_merge(repo_metadata):
              f"{json.dumps(repo_metadata, indent=2, default=serialize_datetime_or_propagate)}\n")
 
     task_finish_status = "successfully"
-    repo_metadata['task_finish_details'] = ''
+    repo_metadata['task_error_details'] = ''
     # try: run_command() might raise an exception.
     try:
         extended_env = os.environ.copy()
@@ -414,6 +415,7 @@ def execute_merge(repo_metadata):
 
         run_command(f'git -C {repo_dir} reset --hard', repo_local_name, logfile_name)
         run_command(f'git -C {repo_dir} clean -fd', repo_local_name, logfile_name)
+        g_logger.info("Note, the checkout command does't pull the remote. Do this in the pre-script.")
         run_command(f'git -C {repo_dir} checkout {dest_branch}', repo_local_name, logfile_name)
 
         if g_cl_args.merge_branch_template:
@@ -452,15 +454,15 @@ def execute_merge(repo_metadata):
 
     except Exception as e:
         task_finish_status = "with FAILURE"
-        repo_metadata['task_finish_details'] = str(e)
-        return str(e)
+        repo_metadata['task_error_details'] = str(e)
+        return [repo_local_name, e]
     finally:
         task_end_timestamp = datetime.now()
         repo_metadata['task_end'] = task_end_timestamp
-        task_duration = task_end_timestamp - task_start_timestamp
-        repo_metadata['task_duration'] = str(task_duration)
+        time_delta = task_end_timestamp - task_start_timestamp
+        repo_metadata['task_duration'] = format_timedelta(time_delta)
         repo_metadata['task_finish_status'] = task_finish_status
-        log_msg = f"Finished merge-task for '{repo_local_name}' {task_finish_status}."
+        log_msg = f"Merge-task for '{repo_local_name}' finished {task_finish_status}."
         if task_finish_status == "successfully":
             g_logger.info(log_msg)
         else:
@@ -470,58 +472,24 @@ def execute_merge(repo_metadata):
                  f"{json.dumps(repo_metadata, indent=2, default=serialize_datetime_or_propagate)}\n")
 
 
-def get_formatted_timediff_mmss(time_diff: timedelta) -> str:
+def format_timedelta(time_delta: timedelta):
     """
     Convert the given time_diff to format "MM:SS.00".
     The MM can be > 60 min.
-    :param time_diff: The time-diff
+    :param time_delta: The time-diff
     :return: Time-diff in MM:SS.00, where "00" represents milliseconds.
     """
 
-    total_seconds = time_diff.total_seconds()
+    total_seconds = time_delta.total_seconds()
     minutes = total_seconds // 60
     seconds = total_seconds % 60
     # Seconds-format "05.2f": 5 = 2 digits for seconds + dot + 2 digits for millis.
-    formatted_diff = f'{minutes:02.0f}:{seconds:05.2f}'
-
+    formatted_diff = f'{minutes:02.0f}:{seconds:04.1f}'
     return formatted_diff
 
 
-def make_report_xml_content(repos_metadata):
-    EMPTY_CELL_DEFAULT = '&nbsp;'
-    lines = []
-    line = []
-
-    lines.append('<table>')
-    line.append('<tr>')
-    line.append('<td>repo_local_name</td>')
-    line.append('<td>task_finish_status</td>')
-    line.append('<td>source_ref</td>')
-    line.append('<td>dest_branch</td>')
-    line.append('<td>task_duration</td>')
-    line.append('<td>task_finish_details</td>')
-    line.append('</tr>')
-    lines.append(''.join(line))
-
-    for repo_metadata in repos_metadata:
-        line.clear()
-        line.append('<tr>')
-        line.append(f'<td>{dict.get(repo_metadata, "repo_local_name", EMPTY_CELL_DEFAULT)}</td>')
-        line.append(f'<td>{dict.get(repo_metadata, "task_finish_status", EMPTY_CELL_DEFAULT)}</td>')
-        line.append(f'<td>{dict.get(repo_metadata, "source_ref", EMPTY_CELL_DEFAULT)}</td>')
-        line.append(f'<td>{dict.get(repo_metadata, "dest_branch", EMPTY_CELL_DEFAULT)}</td>')
-        line.append(f'<td>{dict.get(repo_metadata, "task_duration", EMPTY_CELL_DEFAULT)}</td>')
-        line.append(f'<td>{dict.get(repo_metadata, "task_finish_details", EMPTY_CELL_DEFAULT)}</td>')
-        line.append('</tr>')
-        lines.append(''.join(line))
-
-    lines.append('</table>')
-
-    return '\n'.join(lines)
-
-
 def exit_handler():
-    g_logger.info(f"Script finished, took {get_formatted_timediff_mmss(datetime.now() - g_script_start)}")
+    g_logger.info(f"Script finished, took {format_timedelta(datetime.now() - g_script_start)}")
 
 
 def main():
@@ -537,6 +505,9 @@ def main():
 
     g_logger.debug(f"args: {g_cl_args}")
 
+    g_logger.info(f"Max. merge-task count is {os.cpu_count()}." +
+                  " Python calculates this number by: (CPUs in your system) + 4")
+
     repos_metadata = make_repos_metadata(g_cl_args.repos_data, g_cl_args.default_source_ref,
                                          g_cl_args.default_dest_branch)
     g_logger.debug(f"repos_metadata: {json.dumps(repos_metadata, default=serialize_datetime_or_propagate)}")
@@ -548,26 +519,44 @@ def main():
     os.makedirs(g_cl_args.repos_dir, exist_ok=True)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        errors = list(executor.map(execute_merge, repos_metadata))
+        # task_results = list(executor.map(execute_merge, repos_metadata))
+        executor.map(execute_merge, repos_metadata)
 
     # with multiprocessing.Pool() as pool:
-    #    errors = list(pool.map(execute_merge, repos_metadata))
-
-    # Write HTML-report
-    report_html_file = pathlib.Path(g_cl_args.logs_dir, 'report.xml')
-    with open(report_html_file, 'w') as f:
-        f.write(make_report_xml_content(repos_metadata))
+    #    task_results = list(pool.map(execute_merge, repos_metadata))
 
     g_logger.debug(f"repos_metadata: {json.dumps(repos_metadata, default=serialize_datetime_or_propagate)}")
-    # The list "errors" contains one entry per thread. An entry is either an error-message or None. Remove all
-    # None-values.
-    errors = [error for error in errors if error is not None]
-    if errors:
-        for error in errors:
-            if error is not None:
-                g_logger.error(error)
-        sys.exit(1)
+    # txt_results_table is for command line output.
+    txt_results_table = [['repo_local_name', 'source_ref SR, dest_branch DB', 'task_finish_status',
+                          'task_error_details']]
+    # txt_results_table is for command line output.
+    html_results_table = [['repo_local_name', 'source_ref SR, dest_branch DB', 'task_duration', 'task_finish_status',
+                           'task_error_details']]
+    is_error = False
+    for repo_metadata in repos_metadata:
+        task_error_details = repo_metadata['task_error_details']
+        txt_results_table.append([repo_metadata['repo_local_name'],
+                                  f"SR: {repo_metadata['source_ref']}\nDB: {repo_metadata['dest_branch']}",
+                                  repo_metadata['task_finish_status'],
+                                  task_error_details])
+        html_results_table.append([repo_metadata['repo_local_name'],
+                                   f"SR: {repo_metadata['source_ref']}<br>DB: {repo_metadata['dest_branch']}",
+                                   repo_metadata['task_duration'],
+                                   repo_metadata['task_finish_status'],
+                                   task_error_details
+                                   ])
+        if task_error_details:
+            is_error = True
 
+    g_logger.info("\n" + tabulate(txt_results_table, headers='firstrow', tablefmt='grid'))
+
+    report_file = pathlib.Path(g_cl_args.logs_dir, 'report.html')
+    with open(report_file, 'w') as f:
+        # tablefmt='unsafehtml' keeps the '<br>' (does not escape it).
+        f.write(tabulate(html_results_table, headers='firstrow', tablefmt='unsafehtml'))
+
+    if is_error:
+        sys.exit(1)
     sys.exit(0)
 
 
