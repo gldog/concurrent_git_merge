@@ -280,7 +280,11 @@ Merge back child branch to parent branch using a merge branch and pull request:
                 \         1. merge ↑ M
                  -----------------------------------------  Child, SOURCE_REF
 
-# Create a fully self-contained executable zipapp
+# Tech details
+
+The default value of max_workers is min(32, os.cpu_count() + 4).
+
+# Create a fully self-contained executable zipapp with shiv
 
 You can create a fully self-contained executable zipapp `concurrent_git_merge.pyz` with all dependencies bundled into
 one
@@ -291,19 +295,18 @@ In Linux and macOS:
     python3 -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
-    python -m shiv -c src -o concurrent_git_merge.pyz .
+    shiv -c src -o concurrent_git_merge.pyz .
 
 In Windows Gitbash:
 
     python -m venv venv
     source venv/Scripts/activate
     pip install -r requirements.txt
-    # Parameter -p may differ on your system.
-    python -m shiv -c src -p /c/Programme/Python3/python -o concurrent_git_merge.pyz .
+    shiv -c src -p '/usr/bin/env python' -o concurrent_git_merge.pyz .
 
 In Windows CMD:
 
     python -m venv venv
     venv\Scripts\activate.bat
     pip install -r requirements.txt
-    python -m shiv -c src -o concurrent_git_merge.pyz .
+    shiv -c src -o concurrent_git_merge.pyz .
