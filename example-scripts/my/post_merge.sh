@@ -13,7 +13,7 @@ set -eu
 
 trap on_error ERR
 
-function on_error() {
+on_error() {
   echo "$0 for repo $CGM_REPO_DIR exited with FAILURE."
 }
 
@@ -49,10 +49,10 @@ eval "$cmd"
 echo "# Check for merge conflict."
 cmd="git -C $CGM_REPO_DIR status --porcelain"
 echo "\$ $cmd"
-git_status_output=$(eval "$cmd")
-echo "$git_status_output"
+git_status=$(eval "$cmd")
+echo "$git_status"
 
-if [[ ! -z "$git_status_output" ]]; then
+if [[ -n "$git_status" ]]; then
   echo "ERROR: There is a merge conflict or the workspace not clean."
   exit 1
 fi

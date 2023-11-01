@@ -280,6 +280,10 @@ Merge back child branch to parent branch using a merge branch and pull request:
                 \         1. merge ↑ M
                  -----------------------------------------  Child, SOURCE_REF
 
+For more details and pitfalls
+see [gldog/keep_ours_paths_merge_driver => README](https://github.com/gldog/keep_ours_paths_merge_driver/blob/master/README.md)
+.
+
 # Tech details
 
 The default value of max_workers is min(32, os.cpu_count() + 4).
