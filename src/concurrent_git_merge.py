@@ -289,21 +289,22 @@ def validate_repos_metadata(repos_metadata):
 
     errors = []
     # Collect the repo-local-names to check if they are unique.
-    repo_local_names = set()
+    repo_local_names = []
     for repo_metadata in repos_metadata:
         repo_data_from_parameter = repo_metadata['repo_data_from_parameter']
         repo_local_name = repo_metadata['repo_local_name']
         if not repo_local_name:
             errors.append(f"Missing repo-local-name in repo-data '{repo_data_from_parameter}'")
         else:
-            repo_local_names.add(repo_local_name)
+            repo_local_names.append(repo_local_name)
         if not repo_metadata['source_ref']:
             errors.append(f"Missing source-ref in or for repo-data '{repo_data_from_parameter}'")
         if not repo_metadata['dest_branch']:
             errors.append(f"Missing dest-branch in or for repo-data '{repo_data_from_parameter}'")
         # The 'prj/repo-remote-name' part ist optional.
-    if len(repo_local_names) < len(repos_metadata):
-        errors.append(f"Repo-short-names not unique.")
+    if len(set(repo_local_names)) < len(repos_metadata):
+        errors.append(f"Values of repo_local_name given in parameter -r/--repos-data not unique."+
+                      f" Values are: {repo_local_names}")
 
     return errors
 
@@ -504,9 +505,6 @@ def main():
     configure_logger(g_cl_args.log_level, g_cl_args.logs_dir)
 
     g_logger.debug(f"args: {g_cl_args}")
-
-    g_logger.info(f"Max. merge-task count is {os.cpu_count()}." +
-                  " Python calculates this number by: (CPUs in your system) + 4")
 
     repos_metadata = make_repos_metadata(g_cl_args.repos_data, g_cl_args.default_source_ref,
                                          g_cl_args.default_dest_branch)
