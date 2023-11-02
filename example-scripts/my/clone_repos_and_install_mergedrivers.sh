@@ -182,12 +182,43 @@ define_and_register_mergedrivers() {
   echo "#   Defining the XML Maven pom.xml merge driver:"
   local cmd="git config --local merge.maven-pomxml-keep-ours-path-merge-driver.driver"
   cmd+=" '"
+  # Merge driver params:
+  # -t: The file type to merge, one of 'XML', 'JSON'.
+  # -O: Base version (ancestor's version)
+  # -A: Ours version (current version).
+  # -B: Theirs version (other branches' version).
+  # -P: The pathname in which the merged result will be stored.
+  # -p: List of paths with merge-strategy and and path-pattern.
   cmd+="$MERGE_DRIVER_EXECUTABLE -t XML -O %O -A %A -B %B -P ./%P -p"
   cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./version"
   cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./parent/version"
   cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./properties/revision"
   cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:./properties/:.+[.]version"
-  cmd+=" ./properties/ci-merge-driver-trigger"
+  # This line is about triggering a 3-way-merge:
+  # With merge-strategy "always-ours" it is expected the configured path always wins. But Git calls
+  # a merge driver only in case of a 3-way-merge. Without a 3-way-merge but with a change on "theirs"
+  # Git will fast-forward merge a file. By this, that "theirs" changes win on dest-branch "ours".
+  # This is not expected using "always-ours". The following line will be changed by the pre-script
+  # in case
+  #   - the merge-strategy is "always-ours", and
+  #   - ours file hasn't changed.
+  # This provokes a 3-way-merge, Git will trigger the merge driver, and the merge driver can keep
+  # the configured paths.
+  # The "trigger text line" is:
+  #   <project>
+  #     <properties>
+  #       <ci-merge-driver-trigger>
+  #         This line is to trigger the Git merge driver. Do not touch! (12345)
+  #       </ci-merge-driver-trigger>
+  #     ...
+  # The "(12345)" is the file's hash (before changing it). This hash will be changed to make a
+  # modification to the file. See modify_files_if_unchanged_on_dest_branch.sh.
+  # The trigger-text is embedded in the XML as tag, not as comment or simply an empty line. This
+  # is to make that tag part of the merge driver's path configuration. This line is only a trigger
+  # and must not provoke merge conflicts, not be changed by IDEs or formatters.
+  # "always-ours" is used here because that should result in less merges than "onconflict-ours"
+  # (the merge result of this line is not of interest).
+  cmd+=" always-ours:./properties/ci-merge-driver-trigger"
   cmd+="'"
   exec_cmd "$cmd"
 
@@ -196,7 +227,10 @@ define_and_register_mergedrivers() {
   cmd+=" '"
   cmd+="$MERGE_DRIVER_EXECUTABLE -t JSON -O %O -A %A -B %B -P ./%P -p"
   cmd+=" ${MERGE_DRIVER_MERGE_STRATEGY}:version"
-  cmd+=" com_example.ci-merge-driver-trigger"
+  # This line is about triggering a 3-way-merge.
+  # NPM allows arbitrary (but valid) custom JSON-objects, as long as they do not conflict with
+  # reserved attributes. Here, "com_example.ci-merge-driver-trigger" is used.
+  cmd+=" always-ours:com_example.ci-merge-driver-trigger"
   cmd+="'"
   exec_cmd "$cmd"
 
