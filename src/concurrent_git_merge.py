@@ -303,7 +303,7 @@ def validate_repos_metadata(repos_metadata):
             errors.append(f"Missing dest-branch in or for repo-data '{repo_data_from_parameter}'")
         # The 'prj/repo-remote-name' part ist optional.
     if len(set(repo_local_names)) < len(repos_metadata):
-        errors.append(f"Values of repo_local_name given in parameter -r/--repos-data not unique."+
+        errors.append(f"Values of repo_local_name given in parameter -r/--repos-data not unique." +
                       f" Values are: {repo_local_names}")
 
     return errors
@@ -546,7 +546,9 @@ def main():
         if task_error_details:
             is_error = True
 
-    g_logger.info("\n" + tabulate(txt_results_table, headers='firstrow', tablefmt='grid'))
+    # maxcolwidths for column "task_finish_status" to avoid line breaks of table rows in case of errors.
+    g_logger.info("\n" + tabulate(txt_results_table, headers='firstrow', tablefmt='grid',
+                                  maxcolwidths=[None, None, None, 50]))
 
     report_file = pathlib.Path(g_cl_args.logs_dir, 'report.html')
     with open(report_file, 'w') as f:
