@@ -290,27 +290,69 @@ The default value of max_workers is min(32, os.cpu_count() + 4).
 
 # Create a fully self-contained executable zipapp with shiv
 
-You can create a fully self-contained executable zipapp `concurrent_git_merge.pyz` with all dependencies bundled into
-one
-file. This allows simple distribution without letting the uses install dependencies.
+## Create the zipapp
 
-In Linux and macOS:
+You can create a fully self-contained executable zipapp `concurrent_git_merge.pyz` with all dependencies bundled into
+it.
+This allows simple distribution without letting the users install dependencies.
+
+The steps are the same for each platform, but the commands differ slightly.
+
+Create zipapp in Linux and macOS:
 
     python3 -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
     shiv -c src -o concurrent_git_merge.pyz .
 
-In Windows Gitbash:
+Create zipapp in Windows Gitbash:
 
     python -m venv venv
     source venv/Scripts/activate
     pip install -r requirements.txt
-    shiv -c src -p '/usr/bin/env python' -o concurrent_git_merge.pyz .
+    shiv -c src -p python -o concurrent_git_merge.pyz .
 
-In Windows CMD:
+Without `-p python`, shiv creates the Shebang `#!/usr/bin/env python3`.
+But the Python binary shipped with the Windows Python installer is just `python.exe`, not `python3.exe`.
+The zipapp won't start.
+
+Setting `-p '/usr/bin/env python'` (python without "3") does weird things issued in
+[shiv generates invalid shebang line in git bash (windows/mingw) #168](https://github.com/linkedin/shiv/issues/168),
+(still in shiv version 1.0.4).
+
+If you experiment with `-p` and you see `cannot execute: required file not found`, have a look into the zipapp at the
+first line to see what shiv has created as Shebang:
+
+    # Test:
+    $ ./concurrent_git_merge.pyz
+    bash: ./concurrent_git_merge.pyz: cannot execute: required file not found
+    # Look into the zipapp:
+    head -1 concurrent_git_merge.pyz
+    ...
+
+Interestingly, Windows CMD creates `-p '/usr/bin/env python'` as expected:
+
+    (venv) D:\prj\concurrent_git_merge>shiv -c src -p "/usr/bin/env python" -o concurrent_git_merge.pyz .
+    ...
+    (venv) D:\prj\concurrent_git_merge>head -1 concurrent_git_merge.pyz
+    #!/usr/bin/env python
+
+And that is executable in Gitbash!
+
+Create zipapp in Windows CMD:
 
     python -m venv venv
     venv\Scripts\activate.bat
     pip install -r requirements.txt
     shiv -c src -o concurrent_git_merge.pyz .
+
+## About running the zipapp: Temp-dir .shiv
+
+Once executed, for each version of the merge driver (not for each run) an entry in the `.shiv` directory will exist.
+This is where Python extracts the zipapp for execution.
+You can delete its contents at any time.
+The next execution will take a second for extraction.
+Dependent on the OS its path is:
+
+* Linux, macOS: `~/.shiv`.
+* Windows and Gitbash: `C:\Users\<user>\.shiv`
